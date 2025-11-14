@@ -1,1 +1,1 @@
-# connect4-moderator-observer
+# Connect4 Moderator - Observer
