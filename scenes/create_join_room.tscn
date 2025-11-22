@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://cct663hb47yka"]
+
+[ext_resource type="PackedScene" uid="uid://d1wr0v5ht8vqb" path="res://scenes/button_small.tscn" id="1_4km6l"]
+[ext_resource type="Script" uid="uid://b1ogflafdte71" path="res://scripts/create_join_room.gd" id="1_k6yuv"]
+
+[node name="CreateJoinRoom" type="Node2D"]
+script = ExtResource("1_k6yuv")
+
+[node name="JoinGameButton" parent="." instance=ExtResource("1_4km6l")]
+offset_left = -16.0
+offset_top = 12.0
+offset_right = 16.0
+offset_bottom = 28.0
+
+[node name="CreateGameButton" parent="." instance=ExtResource("1_4km6l")]
+offset_left = -16.0
+offset_top = 40.0
+offset_right = 16.0
+offset_bottom = 56.0
