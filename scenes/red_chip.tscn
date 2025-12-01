@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b4tujjdhmk4h"]
+
+[ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="1_qsflu"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_tfypd"]
+radius = 12.0415945
+
+[node name="RedChip" type="RigidBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_qsflu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_tfypd")

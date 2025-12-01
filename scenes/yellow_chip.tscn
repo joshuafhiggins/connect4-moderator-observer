@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://lruk652t0xe5"]
+
+[ext_resource type="Texture2D" uid="uid://qy30emdgrk7o" path="res://assets/sprites/YellowChip.png" id="1_eu0sq"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_epi6l"]
+radius = 12.0
+
+[node name="YellowChip" type="RigidBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_eu0sq")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_epi6l")

@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3 uid="uid://m542qwlp7hl7"]
+
+[ext_resource type="Script" uid="uid://dg5jt0o0r0v3r" path="res://scripts/BoardScreen.cs" id="1_b3w8x"]
+[ext_resource type="PackedScene" uid="uid://d1wr0v5ht8vqb" path="res://scenes/button_small.tscn" id="1_tbc1w"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_b3w8x"]
+
+[node name="BoardScreen" type="Node2D"]
+script = ExtResource("1_b3w8x")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+shape = SubResource("WorldBoundaryShape2D_b3w8x")
+
+[node name="SpwnRed" parent="." instance=ExtResource("1_tbc1w")]
+offset_left = 512.0
+offset_top = -324.0
+offset_right = 576.0
+offset_bottom = -292.0
+
+[node name="SpwnYlw" parent="." instance=ExtResource("1_tbc1w")]
+offset_left = 512.0
+offset_top = -292.0
+offset_right = 576.0
+offset_bottom = -260.0

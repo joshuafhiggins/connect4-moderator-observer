@@ -1,12 +1,15 @@
-[gd_scene load_steps=2 format=3 uid="uid://cr8fi0e4r88s8"]
+[gd_scene load_steps=3 format=3 uid="uid://cr8fi0e4r88s8"]
 
 [ext_resource type="PackedScene" uid="uid://cct663hb47yka" path="res://scenes/create_join_room.tscn" id="1_uwrxv"]
+[ext_resource type="PackedScene" uid="uid://m542qwlp7hl7" path="res://scenes/board_screen.tscn" id="2_yqjtg"]
 
 [node name="Game" type="Node2D"]
 
 [node name="GameManager" type="Node" parent="."]
 
 [node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(5, 5)
 
 [node name="CreateJoinRoom" parent="." instance=ExtResource("1_uwrxv")]
+visible = false
+
+[node name="BoardScreen" parent="." instance=ExtResource("2_yqjtg")]
