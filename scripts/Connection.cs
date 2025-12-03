@@ -1,16 +1,16 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Net.WebSockets;
 using System.Threading;
 
 public partial class Connection : Node
 {
-    private const string WS_DEFAULT_ADDRESS = "wss://connect4.abunchofknowitalls.com";
+    public const string WS_DEFAULT_ADDRESS = "wss://connect4.abunchofknowitalls.com";
 
     public static Connection Instance { get; private set; }
 
     private WebSocketPeer _webSocket = new WebSocketPeer();
+    private bool _firstConnect = true;
     private Thread _gameListThread;
     private bool _gameListThreadRunning;
 
@@ -23,6 +23,7 @@ public partial class Connection : Node
     public event Action OnGameTerminated;
     public event Action<int> OnOpponentMove;
 
+    public event Action OnWatchGameAck;
     public event Action<string> OnObserveWin;
     public event Action OnObserveDraw;
     public event Action OnObserveTerminated;
@@ -30,28 +31,56 @@ public partial class Connection : Node
     public event Action<List<MatchData>> OnUpdatedMatches;
     public event Action<List<PlayerData>> OnUpdatedPlayers;
     public event Action<List<(string, int)>> OnTournamentEnd;
+    public event Action OnBecomeAdmin;
+    
 
     // Already prints to console
     public event Action<string, string> OnError;
 
     public bool IsAdmin { get; private set; }
     public bool IsPlayer { get; private set; }
+    
+    public MatchData CurrentObservingMatch { get; private set; }
 
     private bool IsSocketOpen => _webSocket.GetReadyState() == WebSocketPeer.State.Open;
 
     public override void _Ready()
     {
         Instance = this;
+        _webSocket.SetHeartbeatInterval(5.0);
+        _webSocket.HeartbeatInterval = 5.0;
     }
 
-    public void Connect(string address)
+    public bool Connect(string address)
     {
-        Error error = _webSocket.ConnectToUrl(address);
-        while (error != Error.Ok)
+        if (_webSocket.GetReadyState() == WebSocketPeer.State.Open)
         {
-            // TODO: back off so we don't DDOS
-            error = _webSocket.ConnectToUrl(address);
+            return false;
         }
+
+        Error error = _webSocket.ConnectToUrl(address);
+        if (error != Error.Ok)
+        {
+            return false;
+        }
+
+        _webSocket.Poll();
+
+        while (_webSocket.GetReadyState() == WebSocketPeer.State.Connecting)
+        {
+            _webSocket.Poll();
+            Thread.Sleep(TimeSpan.FromMilliseconds(17));
+        }
+
+        if (_webSocket.GetReadyState() != WebSocketPeer.State.Open)
+        {
+            return false;
+        }
+
+        _webSocket.SetHeartbeatInterval(5.0);
+        _webSocket.HeartbeatInterval = 5.0;
+        _firstConnect = false;
+        return true;
     }
 
     public override void _ExitTree()
@@ -59,11 +88,11 @@ public partial class Connection : Node
         StopGameListRefreshLoop();
     }
 
-    public override void _Process(double delta)
+    public override void _PhysicsProcess(double delta)
     {
         _webSocket.Poll();
         WebSocketPeer.State state = _webSocket.GetReadyState();
-        if (state == WebSocketPeer.State.Closing || state == WebSocketPeer.State.Closed)
+        if (state == WebSocketPeer.State.Closed && !_firstConnect)
         {
             StopGameListRefreshLoop();
             GetTree().Quit();
@@ -99,10 +128,12 @@ public partial class Connection : Node
 
         SendCommand("CONNECT", clientId);
     }
+
     public void SendReady()
     {
         SendCommand("READY");
     }
+
     public void SendPlay(int column)
     {
         SendCommand("PLAY", column.ToString());
@@ -113,6 +144,7 @@ public partial class Connection : Node
     {
         SendCommand("GAME", "LIST");
     }
+
     private void StartGameListRefreshLoop()
     {
         if (_gameListThreadRunning)
@@ -139,31 +171,35 @@ public partial class Connection : Node
         };
         _gameListThread.Start();
     }
+
     private void StopGameListRefreshLoop()
+    {
+        if (!_gameListThreadRunning)
         {
-            if (!_gameListThreadRunning)
-            {
-                return;
-            }
-    
-            _gameListThreadRunning = false;
-            _gameListThread?.Join();
-            _gameListThread = null;
+            return;
         }
+
+        _gameListThreadRunning = false;
+        _gameListThread?.Join();
+        _gameListThread = null;
+    }
+
     public void UpdatePlayerList()
     {
         SendCommand("PLAYER", "LIST");
     }
+
     public void SendWatchGame(int matchID)
     {
         SendCommand("GAME", "WATCH:" + matchID);
     }
+
     public void AdminAuth(string password)
-        {
-            if (IsAdmin) return;
-            SendCommand("ADMIN", "AUTH:" + password);
-        }
-    
+    {
+        if (IsAdmin) return;
+        SendCommand("ADMIN", "AUTH:" + password);
+    }
+
 
     // Admin commands
     public void KickPlayer(string playerId)
@@ -171,16 +207,19 @@ public partial class Connection : Node
         if (!IsAdmin) return;
         SendCommand("ADMIN", "KICK:" + playerId);
     }
+
     public void StartTournament()
     {
         if (!IsAdmin) return;
         SendCommand("TOURNAMENT", "START");
     }
+
     public void TerminateGame()
     {
         if (!IsAdmin) return;
         SendCommand("GAME", "TERMINATE");
     }
+
     public void SetTournamentWait(float waitTime)
     {
         if (!IsAdmin) return;
@@ -232,12 +271,14 @@ public partial class Connection : Node
                     IsPlayer = true;
                     OnConnected?.Invoke();
                 }
+
                 break;
             case "READY":
                 if (body.Equals("ACK", StringComparison.OrdinalIgnoreCase))
                 {
                     OnReadyAcknowledged?.Invoke();
                 }
+
                 break;
             case "GAME":
                 HandleGameMessage(body);
@@ -254,12 +295,15 @@ public partial class Connection : Node
                 {
                     GD.PrintErr($"Invalid opponent column: {body}");
                 }
+
                 break;
             case "ADMIN":
                 if (body == "AUTH:ACK")
                 {
                     IsAdmin = true;
+                    OnBecomeAdmin?.Invoke();
                 }
+
                 break;
             case "TOURNAMENT":
                 HandleTournamentMessage(body);
@@ -273,6 +317,7 @@ public partial class Connection : Node
                 break;
         }
     }
+
     private void HandleTournamentMessage(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
@@ -295,11 +340,13 @@ public partial class Connection : Node
                     string[] data = entry.Split(',');
                     playerScoreboard.Add((data[0], int.Parse(data[1])));
                 }
+
                 OnTournamentEnd?.Invoke(playerScoreboard);
                 break;
             }
         }
     }
+
     private void HandlePlayerList(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
@@ -316,17 +363,26 @@ public partial class Connection : Node
             case "LIST":
             {
                 List<PlayerData> players = new List<PlayerData>();
+
+                if (segments.Length < 2)
+                {
+                    OnUpdatedPlayers?.Invoke(players);
+                    break;
+                }
+
                 string[] entries = segments[1].Split("|");
                 foreach (string entry in entries)
                 {
                     string[] data = entry.Split(',');
-                    players.Add(new PlayerData(data[0], bool.Parse(data[1]),  bool.Parse(data[2])));
+                    players.Add(new PlayerData(data[0], bool.Parse(data[1]), bool.Parse(data[2])));
                 }
+
                 OnUpdatedPlayers?.Invoke(players);
                 break;
             }
         }
     }
+
     private void HandleGameMessage(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
@@ -381,13 +437,26 @@ public partial class Connection : Node
                     break;
                 case "LIST":
                     List<MatchData> matches = new List<MatchData>();
+
+                    if (segments.Length < 2)
+                    {
+                        OnUpdatedMatches?.Invoke(matches);
+                        break;
+                    }
+
                     string[] entries = segments[1].Split("|");
                     foreach (string entry in entries)
                     {
                         string[] data = entry.Split(',');
                         matches.Add(new MatchData(int.Parse(data[0]), data[1], data[2]));
                     }
+
                     OnUpdatedMatches?.Invoke(matches);
+                    break;
+                case "WATCH":
+                    string[] game = segments[2].Split(",");
+                    CurrentObservingMatch = new MatchData(int.Parse(game[0]), game[1], game[2]);
+                    OnWatchGameAck?.Invoke();
                     break;
                 default:
                     GD.Print($"Unhandled GAME message: {body}");
@@ -395,6 +464,7 @@ public partial class Connection : Node
             }
         }
     }
+
     private void HandleErrorMessage(string body)
     {
         if (string.IsNullOrWhiteSpace(body))

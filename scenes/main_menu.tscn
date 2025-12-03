@@ -1,0 +1,63 @@
+[gd_scene load_steps=4 format=3 uid="uid://dcx5nvs0pa7me"]
+
+[ext_resource type="Script" uid="uid://bk22f71oximjk" path="res://scripts/AddressUI.cs" id="1_l6cm7"]
+[ext_resource type="Script" uid="uid://cpjbiqn26khck" path="res://scripts/ConnectButtonUI.cs" id="2_ekxnf"]
+[ext_resource type="PackedScene" uid="uid://rl33x81cxlh0" path="res://scenes/bracket_view.tscn" id="3_bqqt6"]
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Address" type="TextEdit" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -20.0
+offset_right = 250.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Server Address"
+script = ExtResource("1_l6cm7")
+
+[node name="Button" type="Button" parent="." node_paths=PackedStringArray("addressUI", "errorLabel")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = 27.25
+offset_right = 250.0
+offset_bottom = 67.25
+grow_horizontal = 2
+grow_vertical = 2
+text = "Connect"
+script = ExtResource("2_ekxnf")
+addressUI = NodePath("../Address")
+errorLabel = NodePath("../Label")
+nextScene = ExtResource("3_bqqt6")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -68.5
+offset_top = 75.149994
+offset_right = 68.5
+offset_bottom = 98.149994
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0, 0, 1)
