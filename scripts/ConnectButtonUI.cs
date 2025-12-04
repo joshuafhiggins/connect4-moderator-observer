@@ -5,14 +5,14 @@ public partial class ConnectButtonUI : Button
 {
 	[Export] public TextEdit AddressUi;
 	[Export] public Label ErrorLabel;
-	[Export] public PackedScene NextScene;
+	private const string BRACKET_SCENE_PATH = "res://scenes/bracket_view.tscn";
 	
 	public override void _Pressed()
 	{
 		if (Connection.Instance.Connect(AddressUi.Text))
 		{
 			GD.Print("Success!");
-			GetTree().ChangeSceneToPacked(NextScene);
+			GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
 		}
 		else
 		{

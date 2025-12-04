@@ -7,7 +7,7 @@ public partial class BracketScene : Control
 	[Export] public Tree Players;
 	[Export] public Tree Matches;
 	[Export] public Texture2D JoinButton;
-	[Export] public PackedScene BoardScene;
+	private const string BOARD_SCENE_PATH = "res://scenes/game.tscn";
 	
 	private List<PlayerData> _playerList;
 	private List<MatchData> _matchList;
@@ -90,6 +90,6 @@ public partial class BracketScene : Control
 
 	private void TransitionToBoard()
 	{
-		GetTree().ChangeSceneToPacked(BoardScene);
+		GetTree().ChangeSceneToFile(BOARD_SCENE_PATH);
 	}
 }

@@ -1,8 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://dcx5nvs0pa7me"]
+[gd_scene load_steps=3 format=3 uid="uid://dcx5nvs0pa7me"]
 
 [ext_resource type="Script" uid="uid://bk22f71oximjk" path="res://scripts/AddressUI.cs" id="1_l6cm7"]
 [ext_resource type="Script" uid="uid://cpjbiqn26khck" path="res://scripts/ConnectButtonUI.cs" id="2_ekxnf"]
-[ext_resource type="PackedScene" uid="uid://rl33x81cxlh0" path="res://scenes/bracket_view.tscn" id="3_bqqt6"]
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -45,7 +44,6 @@ text = "Connect"
 script = ExtResource("2_ekxnf")
 AddressUi = NodePath("../Address")
 ErrorLabel = NodePath("../Label")
-NextScene = ExtResource("3_bqqt6")
 
 [node name="Label" type="Label" parent="."]
 layout_mode = 1

@@ -4,11 +4,11 @@ using System.Collections.Generic;
 
 public partial class BoardScreen : Node2D {
 	
-	[Export] public PackedScene BracketScene;
 	[Export] public BaseButton BackButton;
 	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
+	private const string BRACKET_SCENE_PATH = "res://scenes/bracket_screen.tscn";
 	private const int CHIP_SCALE = 3;
 	private const int CHIP_SIZE = 24;
 	private const int CHIP_PADDING = 2;
@@ -150,14 +150,14 @@ public partial class BoardScreen : Node2D {
 	
 	private void TransitionToBracket()
 	{
-		GetTree().ChangeSceneToPacked(BracketScene);
+		GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta) {
 		/*
 		if(p1 != null) {
-            Label username = player1Card.GetNode<Label>("Name");
+			Label username = player1Card.GetNode<Label>("Name");
 			username.Text = p1.username;
 		
 			if(p1.isReady) {
@@ -165,10 +165,10 @@ public partial class BoardScreen : Node2D {
 				status.Text = "Ready!";
 				status.AddThemeColorOverride("font_color", Colors.LimeGreen);
 			}
-        }
+		}
 		
 		if(p2 != null) {
-            Label username = player2Card.GetNode<Label>("Name");
+			Label username = player2Card.GetNode<Label>("Name");
 			username.Text = p2.username;
   
 			if(p2.isReady) {
@@ -176,8 +176,8 @@ public partial class BoardScreen : Node2D {
 				status.Text = "Ready!";
 				status.AddThemeColorOverride("font_color", Colors.LimeGreen);
 			}
-        }
-        */
+		}
+		*/
 	}
 
 	/*
@@ -235,11 +235,11 @@ public partial class BoardScreen : Node2D {
 		Sprite2D cardRight = playerCard.GetNode<Sprite2D>("Right");
 
 		float offX = 16 * x / 2;
-        cardCenter.Scale = new Vector2(x, 2);
+		cardCenter.Scale = new Vector2(x, 2);
 		cardCenter.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX, cardCenter.Position.Y);
 
 		cardRight.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX * 2 + 8, cardRight.Position.Y); // 8 is a magic number (im too lazy) for the size of the card edge multipled by 2
-    }
+	}
 }
 
 enum Direction
