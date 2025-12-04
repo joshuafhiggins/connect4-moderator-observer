@@ -27,6 +27,9 @@ public partial class BoardScreen : Node2D {
 		player1Card = GetNode<Node2D>("Player1Card");
 		player2Card = GetNode<Node2D>("Player2Card");
 
+		player1Card.GetNode<Label>("Name").Resized += () => setPlayerCardScale((player1Card.GetNode<Label>("Name").GetRect().Size.X + 7) / 16, player1Card);
+		player2Card.GetNode<Label>("Name").Resized += () => setPlayerCardScale((player2Card.GetNode<Label>("Name").GetRect().Size.X + 7) / 16, player2Card);
+
 		redChip = GD.Load<PackedScene>(RED_CHIP_PATH);
 		ylwChip = GD.Load<PackedScene>(YELLOW_CHIP_PATH);
 	}
@@ -110,11 +113,11 @@ public partial class BoardScreen : Node2D {
 		Sprite2D cardCenter = playerCard.GetNode<Sprite2D>("Center");
 		Sprite2D cardRight = playerCard.GetNode<Sprite2D>("Right");
 
-		float offX = 16 * x / 2 - 16;
+		float offX = 16 * x / 2;
         cardCenter.Scale = new Vector2(x, 2);
-		cardCenter.Position += new Vector2(offX, 0);
+		cardCenter.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX, cardCenter.Position.Y);
 
-		cardRight.Position += new Vector2(offX * 2, 0);
+		cardRight.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX * 2 + 8, cardRight.Position.Y); // 8 is a magic number (im too lazy) for the size of the card edge multipled by 2
     }
 }
 
