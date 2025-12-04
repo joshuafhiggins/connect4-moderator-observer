@@ -2,6 +2,9 @@ using Godot;
 using System;
 
 public partial class BoardScreen : Node2D {
+	
+	[Export] public PackedScene BracketScene;
+	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
 	private const int CHIP_SCALE = 3;
@@ -16,8 +19,7 @@ public partial class BoardScreen : Node2D {
 
 	private Node2D player1Card; 
 	private Node2D player2Card;
-	private PlayerData p1;
-	private PlayerData p2;
+	private MatchData matchData;
 
 	private RigidBody2D[,] chips = new RigidBody2D[6, 7]; // 6 rows 7 cols | 0, 0 is top left
 
@@ -32,31 +34,85 @@ public partial class BoardScreen : Node2D {
 
 		redChip = GD.Load<PackedScene>(RED_CHIP_PATH);
 		ylwChip = GD.Load<PackedScene>(YELLOW_CHIP_PATH);
+		
+		matchData = Connection.Instance.CurrentObservingMatch;
+		player1Card.GetNode<Label>("Name").Text = matchData.player1;
+		player2Card.GetNode<Label>("Name").Text = matchData.player2;
+
+		Connection.Instance.OnObserveWin += ObserveWin;
+		Connection.Instance.OnObserveDraw += ObserveDraw;
+		Connection.Instance.OnObserveTerminated += ObserveTerminated;
+		Connection.Instance.OnObserveMove += ObserveMove;
+	}
+
+	public override void _ExitTree()
+	{
+		Connection.Instance.OnObserveWin -= ObserveWin;
+		Connection.Instance.OnObserveDraw -= ObserveDraw;
+		Connection.Instance.OnObserveTerminated -= ObserveTerminated;
+		Connection.Instance.OnObserveMove -= ObserveMove;
+	}
+
+	private void ObserveMove(string username, int column)
+	{
+		if (username == matchData.player1)
+		{
+			spawnRed(column);
+		}
+		else
+		{
+			spawnYellow(column);
+		}
+	}
+
+	private void ObserveWin(string winner)
+	{
+		// TODO
+		TransitionToBracket();
+	}
+	
+	private void ObserveDraw()
+	{
+		// TODO
+		TransitionToBracket();
+	}
+	
+	private void ObserveTerminated()
+	{
+		// TODO
+		TransitionToBracket();
+	}
+	
+	private void TransitionToBracket()
+	{
+		GetTree().ChangeSceneToPacked(BracketScene);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta) {
+		/*
 		if(p1 != null) {
             Label username = player1Card.GetNode<Label>("Name");
 			username.Text = p1.username;
-
+		
 			if(p1.isReady) {
 				Label status = player1Card.GetNode<Label>("Status");
 				status.Text = "Ready!";
 				status.AddThemeColorOverride("font_color", Colors.LimeGreen);
 			}
         }
-
+		
 		if(p2 != null) {
             Label username = player2Card.GetNode<Label>("Name");
 			username.Text = p2.username;
-
+  
 			if(p2.isReady) {
 				Label status = player2Card.GetNode<Label>("Status");
 				status.Text = "Ready!";
 				status.AddThemeColorOverride("font_color", Colors.LimeGreen);
 			}
         }
+        */
 	}
 
 	/*

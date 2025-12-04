@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dm25u0a2lqk2x" path="res://scripts/BracketScene.cs" id="1_dvj3m"]
 [ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="2_7c11m"]
-[ext_resource type="PackedScene" uid="uid://m542qwlp7hl7" path="res://scenes/board_screen.tscn" id="3_1511b"]
+[ext_resource type="PackedScene" uid="uid://cr8fi0e4r88s8" path="res://scenes/game.tscn" id="3_1511b"]
 
 [node name="BracketView" type="Control" node_paths=PackedStringArray("Players", "Matches")]
 layout_mode = 3
