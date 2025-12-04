@@ -1,44 +1,24 @@
-[gd_scene load_steps=7 format=3 uid="uid://d1wr0v5ht8vqb"]
+[gd_scene load_steps=5 format=3 uid="uid://pdean68jjg80"]
 
-[ext_resource type="Script" uid="uid://frisgjvf17ym" path="res://scripts/button_small.gd" id="2_06p6p"]
 [ext_resource type="Texture2D" uid="uid://dlx02qat7j6lf" path="res://assets/sprites/AssetTileset.png" id="2_q2stu"]
-[ext_resource type="FontFile" uid="uid://c3jmev24lo6ci" path="res://assets/fonts/PixelOperator8.ttf" id="3_dxjfy"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qlcsu"]
+atlas = ExtResource("2_q2stu")
+region = Rect2(0, 64, 16, 16)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6ptbq"]
 atlas = ExtResource("2_q2stu")
-region = Rect2(8, 16, 32, 16)
+region = Rect2(0, 80, 16, 16)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_06p6p"]
 atlas = ExtResource("2_q2stu")
-region = Rect2(8, 32, 32, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_q2stu"]
-atlas = ExtResource("2_q2stu")
-region = Rect2(8, 0, 32, 16)
+region = Rect2(0, 48, 16, 16)
 
 [node name="ButtonSmall" type="TextureButton"]
-offset_left = -32.0
+offset_left = -16.0
 offset_top = -32.0
-offset_right = 32.0
-texture_normal = SubResource("AtlasTexture_6ptbq")
-texture_pressed = SubResource("AtlasTexture_06p6p")
-texture_hover = SubResource("AtlasTexture_q2stu")
-stretch_mode = 4
-script = ExtResource("2_06p6p")
-
-[node name="Label" type="Label" parent="."]
-layout_mode = 0
-offset_left = 2.0
-offset_top = 9.0
-offset_right = 62.0
-offset_bottom = 25.0
-theme_override_colors/font_color = Color(2.7723312e-05, 0.60865843, 0.9772685, 1)
-theme_override_fonts/font = ExtResource("3_dxjfy")
-theme_override_font_sizes/font_size = 16
-text = "TEMP"
-horizontal_alignment = 1
-
-[connection signal="button_down" from="." to="." method="onButtonDown"]
-[connection signal="button_up" from="." to="." method="onButtonUp"]
-[connection signal="mouse_entered" from="." to="." method="onMouseEnter"]
-[connection signal="mouse_exited" from="." to="." method="onMouseExit"]
+offset_bottom = -16.0
+scale = Vector2(2, 2)
+texture_normal = SubResource("AtlasTexture_qlcsu")
+texture_pressed = SubResource("AtlasTexture_6ptbq")
+texture_hover = SubResource("AtlasTexture_06p6p")

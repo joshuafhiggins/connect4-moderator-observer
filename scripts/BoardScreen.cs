@@ -39,6 +39,8 @@ public partial class BoardScreen : Node2D {
 		player1Card.GetNode<Label>("Name").Text = matchData.player1;
 		player2Card.GetNode<Label>("Name").Text = matchData.player2;
 
+		GetNode<TextureButton>("BracketButton").Pressed += TransitionToBracket;
+
 		Connection.Instance.OnObserveWin += ObserveWin;
 		Connection.Instance.OnObserveDraw += ObserveDraw;
 		Connection.Instance.OnObserveTerminated += ObserveTerminated;

@@ -10,7 +10,10 @@ func onMouseEnter() -> void:
 	label.add_theme_color_override("font_color", HOVERED_COLOR);
 
 func onMouseExit() -> void:
-	label.add_theme_color_override("font_color", DEFAULT_COLOR);
+	if button_down:
+		label.add_theme_color_override("font_color", CLICKED_COLOR);
+	else:
+		label.add_theme_color_override("font_color", DEFAULT_COLOR);
 
 func onButtonDown() -> void:
 	label.add_theme_color_override("font_color", CLICKED_COLOR);
