@@ -4,10 +4,12 @@ using System;
 public partial class BoardScreen : Node2D {
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
+	private const int CHIP_SCALE = 3;
 	private const int CHIP_SIZE = 24;
 	private const int CHIP_PADDING = 2;
-	private const int X_OFF = -(CHIP_SIZE + CHIP_PADDING) * 7 / 2;
+	private const int CHIP_X_OFF = -(CHIP_SIZE + CHIP_PADDING) * 7 / 2 + (CHIP_SIZE + CHIP_PADDING) / 2;
 	private const int Y_OFF = 300;
+	private const int CARD_CENTER_X_DEFAULT = -536;
 
 	private PackedScene redChip;
 	private PackedScene ylwChip;
@@ -84,8 +86,8 @@ public partial class BoardScreen : Node2D {
 		}
 
 		RigidBody2D newNode = redChip.Instantiate<RigidBody2D>();
-		newNode.Position = new Vector2(X_OFF + (CHIP_SIZE + CHIP_PADDING) * col, -(CHIP_SIZE + CHIP_PADDING) * 7);
 		AddChild(newNode);
+		newNode.Position = new Vector2(CHIP_SCALE * (CHIP_X_OFF + (CHIP_SIZE + CHIP_PADDING) * col), -(CHIP_SIZE + CHIP_PADDING) * 7);
 
 		chips[row, col] = newNode;
 	}
@@ -98,8 +100,8 @@ public partial class BoardScreen : Node2D {
 		}
 
 		RigidBody2D newNode = ylwChip.Instantiate<RigidBody2D>();
-		newNode.Position = new Vector2(X_OFF + (CHIP_SIZE + CHIP_PADDING) * col, -(CHIP_SIZE + CHIP_PADDING) * 7); 
 		AddChild(newNode);
+		newNode.Position = new Vector2(CHIP_SCALE * (CHIP_X_OFF + (CHIP_SIZE + CHIP_PADDING) * col), -(CHIP_SIZE + CHIP_PADDING) * 7); 
 
 		chips[row, col] = newNode;
 	}

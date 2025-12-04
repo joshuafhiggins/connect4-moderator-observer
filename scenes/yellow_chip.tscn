@@ -4,13 +4,15 @@
 [ext_resource type="Texture2D" uid="uid://qy30emdgrk7o" path="res://assets/sprites/YellowChip.png" id="1_eu0sq"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_epi6l"]
-radius = 14.0
+radius = 13.004272
 
 [node name="YellowChip" type="RigidBody2D"]
 script = ExtResource("1_epi6l")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
 texture = ExtResource("1_eu0sq")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+scale = Vector2(3, 3)
 shape = SubResource("CircleShape2D_epi6l")
