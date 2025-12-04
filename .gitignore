@@ -6,3 +6,4 @@
 *.csproj.old
 *.sln
 *.sln.*
+.DS_Store
