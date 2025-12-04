@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://m542qwlp7hl7"]
+[gd_scene load_steps=11 format=3 uid="uid://m542qwlp7hl7"]
 
 [ext_resource type="Script" uid="uid://dg5jt0o0r0v3r" path="res://scripts/BoardScreen.cs" id="1_b3w8x"]
 [ext_resource type="Texture2D" uid="uid://dlx02qat7j6lf" path="res://assets/sprites/AssetTileset.png" id="3_1tlhv"]
@@ -8,6 +8,10 @@
 [ext_resource type="Texture2D" uid="uid://8un28mol7qow" path="res://assets/sprites/BoardTileMap.png" id="6_i2o8i"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_b3w8x"]
+
+[sub_resource type="SegmentShape2D" id="SegmentShape2D_i2o8i"]
+a = Vector2(0, -276)
+b = Vector2(0, 207)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_i2o8i"]
 texture = ExtResource("6_i2o8i")
@@ -24,11 +28,45 @@ sources/0 = SubResource("TileSetAtlasSource_i2o8i")
 [node name="BoardScreen" type="Node2D"]
 script = ExtResource("1_b3w8x")
 
-[node name="StaticBody2D" type="StaticBody2D" parent="."]
+[node name="Floor Collider" type="StaticBody2D" parent="."]
 position = Vector2(0, 200)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor Collider"]
 shape = SubResource("WorldBoundaryShape2D_b3w8x")
+
+[node name="Column Colliders" type="StaticBody2D" parent="."]
+
+[node name="Col0" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(-272, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col1" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(-195, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col2" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(-117, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col3" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(-39, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col4" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(39, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col5" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(117, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col6" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(195, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
+
+[node name="Col7" type="CollisionShape2D" parent="Column Colliders"]
+position = Vector2(274, 0)
+shape = SubResource("SegmentShape2D_i2o8i")
 
 [node name="Player1Card" type="Node2D" parent="."]
 
@@ -129,6 +167,3 @@ tile_set = SubResource("TileSet_glh1q")
 format = 2
 layer_0/z_index = 100
 layer_0/tile_data = PackedInt32Array(-3, 0, 0, -2, 0, 0, -1, 0, 0, -65536, 0, 0, -65535, 0, 0, -65534, 0, 0, -4, 0, 0, -65540, 0, 0, -131076, 0, 0, -196612, 0, 0, -262148, 0, 0, -327684, 0, 0, -327683, 0, 0, -327682, 0, 0, -327681, 0, 0, -393216, 0, 0, -393215, 0, 0, -393214, 0, 0, -327678, 0, 0, -262142, 0, 0, -196606, 0, 0, -131070, 0, 0, -131071, 0, 0, -131072, 0, 0, -65537, 0, 0, -65538, 0, 0, -65539, 0, 0, -131075, 0, 0, -131074, 0, 0, -131073, 0, 0, -196608, 0, 0, -196607, 0, 0, -262143, 0, 0, -262144, 0, 0, -196609, 0, 0, -196610, 0, 0, -196611, 0, 0, -262147, 0, 0, -262146, 0, 0, -262145, 0, 0, -327680, 0, 0, -327679, 0, 0, -5, 196608, 536870912, -65541, 65536, 0, -131077, 65536, 0, -196613, 65536, 0, -262149, 65536, 0, -327685, 196608, 0, 65532, 196608, 1610612736, 2, 196608, 1879048192, -65533, 196608, 805306368, -393213, 196608, 268435456, -458750, 196608, 1342177280, -393219, 65536, 1073741824, -393218, 65536, 1073741824, -393217, 65536, 1073741824, -458752, 65536, 1073741824, -458751, 65536, 1073741824, -393220, 196608, 1073741824, -327677, 65536, 268435456, -262141, 65536, 268435456, -196605, 65536, 268435456, -131069, 65536, 268435456, 65533, 65536, 1879048192, 65534, 65536, 1879048192, 65535, 65536, 1879048192, 0, 65536, 1879048192, 1, 65536, 1879048192)
-
-[node name="Node2D" type="Node2D" parent="."]
-position = Vector2(-536, -299)
