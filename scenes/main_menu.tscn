@@ -28,7 +28,7 @@ grow_vertical = 2
 placeholder_text = "Server Address"
 script = ExtResource("1_l6cm7")
 
-[node name="Button" type="Button" parent="." node_paths=PackedStringArray("addressUI", "errorLabel")]
+[node name="Button" type="Button" parent="." node_paths=PackedStringArray("AddressUi", "ErrorLabel")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -43,9 +43,9 @@ grow_horizontal = 2
 grow_vertical = 2
 text = "Connect"
 script = ExtResource("2_ekxnf")
-addressUI = NodePath("../Address")
-errorLabel = NodePath("../Label")
-nextScene = ExtResource("3_bqqt6")
+AddressUi = NodePath("../Address")
+ErrorLabel = NodePath("../Label")
+NextScene = ExtResource("3_bqqt6")
 
 [node name="Label" type="Label" parent="."]
 layout_mode = 1

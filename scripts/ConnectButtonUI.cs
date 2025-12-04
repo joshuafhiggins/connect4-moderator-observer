@@ -3,20 +3,20 @@ using System;
 
 public partial class ConnectButtonUI : Button
 {
-	[Export] public TextEdit addressUI;
-	[Export] public Label errorLabel;
-	[Export] public PackedScene nextScene;
+	[Export] public TextEdit AddressUi;
+	[Export] public Label ErrorLabel;
+	[Export] public PackedScene NextScene;
 	
 	public override void _Pressed()
 	{
-		if (Connection.Instance.Connect(addressUI.Text))
+		if (Connection.Instance.Connect(AddressUi.Text))
 		{
 			GD.Print("Success!");
-			GetTree().ChangeSceneToPacked(nextScene);
+			GetTree().ChangeSceneToPacked(NextScene);
 		}
 		else
 		{
-			errorLabel.Text = "Couldn't connect to server!";
+			ErrorLabel.Text = "Couldn't connect to server!";
 		}
 		base._Pressed();
 	}
