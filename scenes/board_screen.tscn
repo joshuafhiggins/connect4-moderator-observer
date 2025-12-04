@@ -1,9 +1,24 @@
-[gd_scene load_steps=4 format=3 uid="uid://m542qwlp7hl7"]
+[gd_scene load_steps=10 format=3 uid="uid://m542qwlp7hl7"]
 
 [ext_resource type="Script" uid="uid://dg5jt0o0r0v3r" path="res://scripts/BoardScreen.cs" id="1_b3w8x"]
-[ext_resource type="PackedScene" uid="uid://d1wr0v5ht8vqb" path="res://scenes/button_small.tscn" id="1_tbc1w"]
+[ext_resource type="Texture2D" uid="uid://dlx02qat7j6lf" path="res://assets/sprites/AssetTileset.png" id="3_1tlhv"]
+[ext_resource type="FontFile" uid="uid://c3jmev24lo6ci" path="res://assets/fonts/PixelOperator8.ttf" id="3_rjcmr"]
+[ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="4_1hrcj"]
+[ext_resource type="Texture2D" uid="uid://qy30emdgrk7o" path="res://assets/sprites/YellowChip.png" id="5_i2o8i"]
+[ext_resource type="Texture2D" uid="uid://8un28mol7qow" path="res://assets/sprites/BoardTileMap.png" id="6_i2o8i"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_b3w8x"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_glh1q"]
+texture = ExtResource("6_i2o8i")
+texture_region_size = Vector2i(26, 26)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_u1oi2"]
+sources/0 = SubResource("TileSetAtlasSource_glh1q")
 
 [node name="BoardScreen" type="Node2D"]
 script = ExtResource("1_b3w8x")
@@ -13,14 +28,98 @@ script = ExtResource("1_b3w8x")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
 shape = SubResource("WorldBoundaryShape2D_b3w8x")
 
-[node name="SpwnRed" parent="." instance=ExtResource("1_tbc1w")]
-offset_left = 512.0
-offset_top = -324.0
-offset_right = 576.0
-offset_bottom = -292.0
+[node name="Player1Card" type="Node2D" parent="."]
 
-[node name="SpwnYlw" parent="." instance=ExtResource("1_tbc1w")]
-offset_left = 512.0
+[node name="Left" type="Sprite2D" parent="Player1Card"]
+position = Vector2(-556, -300)
+scale = Vector2(2, 2)
+texture = ExtResource("3_1tlhv")
+region_enabled = true
+region_rect = Rect2(60, 4, 20, 24)
+
+[node name="Center" type="Sprite2D" parent="Player1Card"]
+position = Vector2(-482, -300)
+scale = Vector2(6.75, 2)
+texture = ExtResource("3_1tlhv")
+region_enabled = true
+region_rect = Rect2(80, 4, 16, 24)
+
+[node name="Right" type="Sprite2D" parent="Player1Card"]
+position = Vector2(-420, -300)
+scale = Vector2(2, 2)
+texture = ExtResource("3_1tlhv")
+region_enabled = true
+region_rect = Rect2(96, 4, 8, 24)
+
+[node name="RedChip" type="Sprite2D" parent="Player1Card/Right"]
+position = Vector2(-7, 6)
+scale = Vector2(0.25, 0.25)
+texture = ExtResource("4_1hrcj")
+
+[node name="Name" type="Label" parent="Player1Card"]
+offset_left = -530.0
+offset_top = -312.0
+offset_right = -428.0
+offset_bottom = -296.0
+theme_override_fonts/font = ExtResource("3_rjcmr")
+text = "Player 1"
+
+[node name="Status" type="Label" parent="Player1Card"]
+offset_left = -529.0
 offset_top = -292.0
-offset_right = 576.0
-offset_bottom = -260.0
+offset_right = -427.0
+offset_bottom = -284.0
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_fonts/font = ExtResource("3_rjcmr")
+theme_override_font_sizes/font_size = 8
+text = "NOT READY"
+
+[node name="Player2Card" type="Node2D" parent="."]
+
+[node name="Left" type="Sprite2D" parent="Player2Card"]
+position = Vector2(-556, -228)
+scale = Vector2(2, 2)
+texture = ExtResource("3_1tlhv")
+region_enabled = true
+region_rect = Rect2(60, 4, 20, 24)
+
+[node name="Center" type="Sprite2D" parent="Player2Card"]
+position = Vector2(-482.5, -228)
+scale = Vector2(6.6875, 2)
+texture = ExtResource("3_1tlhv")
+region_enabled = true
+region_rect = Rect2(80, 4, 16, 24)
+
+[node name="Right" type="Sprite2D" parent="Player2Card"]
+position = Vector2(-421, -228)
+scale = Vector2(2, 2)
+texture = ExtResource("3_1tlhv")
+region_enabled = true
+region_rect = Rect2(96, 4, 8, 24)
+
+[node name="YellowChip" type="Sprite2D" parent="Player2Card/Right"]
+position = Vector2(-7, 6)
+scale = Vector2(0.25, 0.25)
+texture = ExtResource("5_i2o8i")
+
+[node name="Label" type="Label" parent="Player2Card"]
+offset_left = -531.0
+offset_top = -240.0
+offset_right = -429.0
+offset_bottom = -224.0
+theme_override_fonts/font = ExtResource("3_rjcmr")
+text = "Player 2"
+
+[node name="Status" type="Label" parent="Player2Card"]
+offset_left = -530.0
+offset_top = -220.0
+offset_right = -428.0
+offset_bottom = -212.0
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_fonts/font = ExtResource("3_rjcmr")
+theme_override_font_sizes/font_size = 8
+text = "NOT READY"
+
+[node name="TileMap" type="TileMap" parent="."]
+tile_set = SubResource("TileSet_u1oi2")
+format = 2
