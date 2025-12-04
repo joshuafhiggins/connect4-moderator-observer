@@ -30,6 +30,7 @@ public partial class Connection : Node
 	public event Action<string, int> OnObserveMove;
 	public event Action<List<MatchData>> OnUpdatedMatches;
 	public event Action<List<PlayerData>> OnUpdatedPlayers;
+	public event Action OnStartTournamentAck;
 	public event Action<List<(string, int)>> OnTournamentEnd;
 	public event Action OnBecomeAdmin;
 	
@@ -39,6 +40,8 @@ public partial class Connection : Node
 
 	public bool IsAdmin { get; private set; }
 	public bool IsPlayer { get; private set; }
+	public bool ActiveTournament { get; private set; }
+
 	
 	public MatchData CurrentObservingMatch { get; private set; }
 
@@ -334,6 +337,7 @@ public partial class Connection : Node
 		{
 			case "END":
 			{
+				ActiveTournament = false;
 				List<(string, int)> playerScoreboard = new List<(string, int)>();
 				string[] entries = segments[1].Split("|");
 				foreach (string entry in entries)
@@ -343,6 +347,12 @@ public partial class Connection : Node
 				}
 
 				OnTournamentEnd?.Invoke(playerScoreboard);
+				break;
+			}
+			case "START":
+			{
+				OnStartTournamentAck?.Invoke();
+				ActiveTournament = true;
 				break;
 			}
 		}

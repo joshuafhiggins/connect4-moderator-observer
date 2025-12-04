@@ -1,6 +1,7 @@
-[gd_scene load_steps=13 format=3 uid="uid://m542qwlp7hl7"]
+[gd_scene load_steps=14 format=3 uid="uid://m542qwlp7hl7"]
 
 [ext_resource type="Script" uid="uid://dg5jt0o0r0v3r" path="res://scripts/BoardScreen.cs" id="1_b3w8x"]
+[ext_resource type="PackedScene" uid="uid://rl33x81cxlh0" path="res://scenes/bracket_view.tscn" id="2_u1oi2"]
 [ext_resource type="Texture2D" uid="uid://dlx02qat7j6lf" path="res://assets/sprites/AssetTileset.png" id="3_1tlhv"]
 [ext_resource type="FontFile" uid="uid://c3jmev24lo6ci" path="res://assets/fonts/PixelOperator8.ttf" id="3_rjcmr"]
 [ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="4_1hrcj"]
@@ -30,8 +31,10 @@ sources/0 = SubResource("TileSetAtlasSource_i2o8i")
 atlas = ExtResource("3_1tlhv")
 region = Rect2(112, 32, 16, 16)
 
-[node name="BoardScreen" type="Node2D"]
+[node name="BoardScreen" type="Node2D" node_paths=PackedStringArray("BackButton")]
 script = ExtResource("1_b3w8x")
+BracketScene = ExtResource("2_u1oi2")
+BackButton = NodePath("BracketButton")
 
 [node name="Floor Collider" type="StaticBody2D" parent="."]
 position = Vector2(0, 200)

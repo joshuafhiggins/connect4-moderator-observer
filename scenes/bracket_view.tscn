@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://rl33x81cxlh0"]
+[gd_scene load_steps=5 format=3 uid="uid://rl33x81cxlh0"]
 
 [ext_resource type="Script" uid="uid://dm25u0a2lqk2x" path="res://scripts/BracketScene.cs" id="1_dvj3m"]
 [ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="2_7c11m"]
 [ext_resource type="PackedScene" uid="uid://cr8fi0e4r88s8" path="res://scenes/game.tscn" id="3_1511b"]
+[ext_resource type="Script" uid="uid://1y72woiynf31" path="res://scripts/AdminControls.cs" id="4_mbqc8"]
 
 [node name="BracketView" type="Control" node_paths=PackedStringArray("Players", "Matches")]
 layout_mode = 3
@@ -17,9 +18,36 @@ Matches = NodePath("HBoxContainer/MatchList")
 JoinButton = ExtResource("2_7c11m")
 BoardScene = ExtResource("3_1511b")
 
+[node name="ColorRect" type="ColorRect" parent="."]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+color = Color(0.13319641, 0.13319641, 0.13319638, 1)
+
+[node name="AdminControls" type="HBoxContainer" parent="ColorRect" node_paths=PackedStringArray("BecomeAdmin", "StartTournament")]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 36.0
+grow_horizontal = 2
+script = ExtResource("4_mbqc8")
+BecomeAdmin = NodePath("BecomeAdmin")
+StartTournament = NodePath("StartTournament")
+
+[node name="BecomeAdmin" type="Button" parent="ColorRect/AdminControls"]
+layout_mode = 2
+text = "Become Admin"
+
+[node name="StartTournament" type="Button" parent="ColorRect/AdminControls"]
+layout_mode = 2
+text = "Start Tournament"
+
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = 36.0

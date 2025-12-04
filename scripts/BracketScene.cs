@@ -29,7 +29,6 @@ public partial class BracketScene : Control
 		
 		Connection.Instance.OnUpdatedPlayers += UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches += UpdateMatches;
-		Connection.Instance.OnBecomeAdmin += BecomeAdmin;
 		Connection.Instance.OnWatchGameAck += TransitionToBoard;
 	}
 
@@ -37,7 +36,6 @@ public partial class BracketScene : Control
 	{
 		Connection.Instance.OnUpdatedPlayers -= UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches -= UpdateMatches;
-		Connection.Instance.OnBecomeAdmin -= BecomeAdmin;
 		Connection.Instance.OnWatchGameAck -= TransitionToBoard;
 	}
 
@@ -90,15 +88,8 @@ public partial class BracketScene : Control
 		} 
 	}
 
-	private void BecomeAdmin()
-	{
-		// TODO
-	}
-
 	private void TransitionToBoard()
 	{
-		// TODO
-		GD.Print("Watch game worked!");
 		GetTree().ChangeSceneToPacked(BoardScene);
 	}
 }

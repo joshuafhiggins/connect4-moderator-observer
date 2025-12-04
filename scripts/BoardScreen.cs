@@ -1,9 +1,11 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 public partial class BoardScreen : Node2D {
 	
 	[Export] public PackedScene BracketScene;
+	[Export] public BaseButton BackButton;
 	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
@@ -45,6 +47,12 @@ public partial class BoardScreen : Node2D {
 		Connection.Instance.OnObserveDraw += ObserveDraw;
 		Connection.Instance.OnObserveTerminated += ObserveTerminated;
 		Connection.Instance.OnObserveMove += ObserveMove;
+		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
+
+		BackButton.Pressed += () =>
+		{
+			TransitionToBracket();
+		};
 	}
 
 	public override void _ExitTree()
@@ -53,6 +61,7 @@ public partial class BoardScreen : Node2D {
 		Connection.Instance.OnObserveDraw -= ObserveDraw;
 		Connection.Instance.OnObserveTerminated -= ObserveTerminated;
 		Connection.Instance.OnObserveMove -= ObserveMove;
+		Connection.Instance.OnTournamentEnd -= ShowTournamentScoreboard;
 	}
 
 	private void ObserveMove(string username, int column)
@@ -69,20 +78,74 @@ public partial class BoardScreen : Node2D {
 
 	private void ObserveWin(string winner)
 	{
-		// TODO
+		var popup = new Popup();
+		popup.AlwaysOnTop = true;
+		popup.PopupCentered();
+		popup.Size = new Vector2I(128, 128);
+		var text = new Label();
+		text.Text = winner + " wins!";
+		popup.AddChild(text);
+		GetTree().Root.AddChild(popup);
 		TransitionToBracket();
 	}
 	
 	private void ObserveDraw()
 	{
-		// TODO
+		var popup = new Popup();
+		popup.AlwaysOnTop = true;
+		popup.PopupCentered();
+		popup.Size = new Vector2I(128, 128);
+		var text = new Label();
+		text.Text = "Draw!";
+		popup.AddChild(text);
+		GetTree().Root.AddChild(popup);
 		TransitionToBracket();
 	}
 	
 	private void ObserveTerminated()
 	{
-		// TODO
+		var popup = new Popup();
+		popup.AlwaysOnTop = true;
+		popup.PopupCentered();
+		popup.Size = new Vector2I(128, 128);
+		var text = new Label();
+		text.Text = "Match Terminated";
+		popup.AddChild(text);
+		GetTree().Root.AddChild(popup);
 		TransitionToBracket();
+	}
+	
+	private void ShowTournamentScoreboard(List<(string, int)> playerScoreboard)
+	{
+		var scoreboardWindow = new Window();
+		scoreboardWindow.AlwaysOnTop = true;
+		scoreboardWindow.MaximizeDisabled = true;
+		scoreboardWindow.Unresizable = true;
+		scoreboardWindow.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
+		scoreboardWindow.Size = new Vector2I(256, 512);
+		scoreboardWindow.CloseRequested += () =>
+		{
+			GetTree().Root.RemoveChild(scoreboardWindow);
+		};
+		
+		var tree = new Tree();
+		tree.HideRoot = true;
+		tree.Columns = 2;
+		tree.ColumnTitlesVisible = true;
+		tree.SetColumnTitle(0, "Player");
+		tree.SetColumnTitle(1, "Score");
+		var root = tree.CreateItem();
+		
+		foreach ((string, int) entry in playerScoreboard)
+		{
+			var item = tree.CreateItem(root);
+			item.SetText(0, entry.Item1);
+			item.SetText(1, entry.Item2.ToString());
+		}
+		
+		scoreboardWindow.AddChild(tree);
+		
+		GetTree().Root.AddChild(scoreboardWindow);
 	}
 	
 	private void TransitionToBracket()
