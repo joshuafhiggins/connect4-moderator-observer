@@ -8,7 +8,7 @@ public partial class BoardScreen : Node2D {
 	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
-	private const string BRACKET_SCENE_PATH = "res://scenes/bracket_screen.tscn";
+	private const string BRACKET_SCENE_PATH = "res://scenes/bracket_view.tscn";
 	private const int CHIP_SCALE = 3;
 	private const int CHIP_SIZE = 24;
 	private const int CHIP_PADDING = 2;
