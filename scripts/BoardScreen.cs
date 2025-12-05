@@ -4,8 +4,6 @@ using System.Collections.Generic;
 
 public partial class BoardScreen : Node2D {
 	
-	[Export] public BaseButton BackButton;
-	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
 	private const string BRACKET_SCENE_PATH = "res://scenes/bracket_view.tscn";
@@ -15,6 +13,9 @@ public partial class BoardScreen : Node2D {
 	private const int CHIP_X_OFF = -(CHIP_SIZE + CHIP_PADDING) * 7 / 2 + (CHIP_SIZE + CHIP_PADDING) / 2;
 	private const int Y_OFF = 300;
 	private const int CARD_CENTER_X_DEFAULT = -536;
+	private const double MOVE_TIMEOUT_BEFORE_PLACE = 1.0f;
+
+	private double currentTimeout = 0.0f;
 
 	private PackedScene redChip;
 	private PackedScene ylwChip;
@@ -22,6 +23,8 @@ public partial class BoardScreen : Node2D {
 	private Node2D player1Card; 
 	private Node2D player2Card;
 	private MatchData matchData;
+
+	private List<(string, int)> moves;
 
 	private RigidBody2D[,] chips = new RigidBody2D[6, 7]; // 6 rows 7 cols | 0, 0 is top left
 
@@ -40,19 +43,35 @@ public partial class BoardScreen : Node2D {
 		matchData = Connection.Instance.CurrentObservingMatch;
 		player1Card.GetNode<Label>("Name").Text = matchData.player1;
 		player2Card.GetNode<Label>("Name").Text = matchData.player2;
-
-		GetNode<TextureButton>("BracketButton").Pressed += TransitionToBracket;
-
+		
 		Connection.Instance.OnObserveWin += ObserveWin;
 		Connection.Instance.OnObserveDraw += ObserveDraw;
 		Connection.Instance.OnObserveTerminated += ObserveTerminated;
 		Connection.Instance.OnObserveMove += ObserveMove;
 		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
+	}
 
-		BackButton.Pressed += () =>
+	public override void _Process(double delta)
+	{
+		if (Connection.Instance.PreviousMoves.Count != 0 && currentTimeout <= 0.0f)
 		{
-			TransitionToBracket();
-		};
+			var move = Connection.Instance.PreviousMoves[0];
+			Connection.Instance.PreviousMoves.RemoveAt(0);
+			if (move.Item1 == matchData.player1)
+			{
+				spawnRed(move.Item2);
+			}
+			else
+			{
+				spawnYellow(move.Item2);
+			}
+
+			currentTimeout = MOVE_TIMEOUT_BEFORE_PLACE;
+		} 
+		else if (currentTimeout >= 0.0f)
+		{
+			currentTimeout -= delta;
+		}
 	}
 
 	public override void _ExitTree()
@@ -66,52 +85,41 @@ public partial class BoardScreen : Node2D {
 
 	private void ObserveMove(string username, int column)
 	{
-		if (username == matchData.player1)
-		{
-			spawnRed(column);
-		}
-		else
-		{
-			spawnYellow(column);
-		}
+		Connection.Instance.PreviousMoves.Add((username, column));
 	}
 
 	private void ObserveWin(string winner)
 	{
-		var popup = new Popup();
-		popup.AlwaysOnTop = true;
-		popup.PopupCentered();
-		popup.Size = new Vector2I(128, 128);
-		var text = new Label();
-		text.Text = winner + " wins!";
-		popup.AddChild(text);
-		GetTree().Root.AddChild(popup);
-		TransitionToBracket();
+		PopupMessage(winner + " wins!");
 	}
 	
 	private void ObserveDraw()
 	{
-		var popup = new Popup();
-		popup.AlwaysOnTop = true;
-		popup.PopupCentered();
-		popup.Size = new Vector2I(128, 128);
-		var text = new Label();
-		text.Text = "Draw!";
-		popup.AddChild(text);
-		GetTree().Root.AddChild(popup);
-		TransitionToBracket();
+		PopupMessage("Draw!");
 	}
 	
 	private void ObserveTerminated()
 	{
+		PopupMessage("Match Terminated");
+	}
+
+	private void PopupMessage(string message)
+	{
 		var popup = new Popup();
 		popup.AlwaysOnTop = true;
 		popup.PopupCentered();
-		popup.Size = new Vector2I(128, 128);
+		popup.Size = new Vector2I(200, 100);
 		var text = new Label();
-		text.Text = "Match Terminated";
+		text.Text = message;
 		popup.AddChild(text);
+		text.GrowHorizontal = Control.GrowDirection.Both;
+		text.GrowVertical = Control.GrowDirection.Both;
+		text.HorizontalAlignment = HorizontalAlignment.Center;
+		text.VerticalAlignment = VerticalAlignment.Center;
+		text.AnchorsPreset = (int) Control.LayoutPreset.FullRect;
+		popup.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
 		GetTree().Root.AddChild(popup);
+		popup.Show();
 		TransitionToBracket();
 	}
 	
@@ -151,33 +159,6 @@ public partial class BoardScreen : Node2D {
 	private void TransitionToBracket()
 	{
 		GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
-	}
-
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta) {
-		/*
-		if(p1 != null) {
-			Label username = player1Card.GetNode<Label>("Name");
-			username.Text = p1.username;
-		
-			if(p1.isReady) {
-				Label status = player1Card.GetNode<Label>("Status");
-				status.Text = "Ready!";
-				status.AddThemeColorOverride("font_color", Colors.LimeGreen);
-			}
-		}
-		
-		if(p2 != null) {
-			Label username = player2Card.GetNode<Label>("Name");
-			username.Text = p2.username;
-  
-			if(p2.isReady) {
-				Label status = player2Card.GetNode<Label>("Status");
-				status.Text = "Ready!";
-				status.AddThemeColorOverride("font_color", Colors.LimeGreen);
-			}
-		}
-		*/
 	}
 
 	/*

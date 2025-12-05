@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://rl33x81cxlh0"]
 
 [ext_resource type="Script" uid="uid://dm25u0a2lqk2x" path="res://scripts/BracketScene.cs" id="1_dvj3m"]
-[ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="2_7c11m"]
-[ext_resource type="PackedScene" uid="uid://b4tujjdhmk4h" path="res://scenes/red_chip.tscn" id="3_1511b"]
+[ext_resource type="Texture2D" uid="uid://dd7lvnidxr5ss" path="res://icon.png" id="2_mbqc8"]
+[ext_resource type="Texture2D" uid="uid://stk7umv2ppss" path="res://assets/sprites/cancel.png" id="3_as653"]
 [ext_resource type="Script" uid="uid://1y72woiynf31" path="res://scripts/AdminControls.cs" id="4_mbqc8"]
 
 [node name="BracketView" type="Control" node_paths=PackedStringArray("Players", "Matches")]
@@ -15,8 +15,8 @@ grow_vertical = 2
 script = ExtResource("1_dvj3m")
 Players = NodePath("HBoxContainer/PlayerList")
 Matches = NodePath("HBoxContainer/MatchList")
-JoinButton = ExtResource("2_7c11m")
-BoardScene = ExtResource("3_1511b")
+WatchButton = ExtResource("2_mbqc8")
+TerminateKickButton = ExtResource("3_as653")
 
 [node name="ColorRect" type="ColorRect" parent="."]
 custom_minimum_size = Vector2(0, 36)
@@ -26,7 +26,7 @@ anchor_right = 1.0
 grow_horizontal = 2
 color = Color(0.13319641, 0.13319641, 0.13319638, 1)
 
-[node name="AdminControls" type="HBoxContainer" parent="ColorRect" node_paths=PackedStringArray("BecomeAdmin", "StartTournament")]
+[node name="AdminControls" type="HBoxContainer" parent="ColorRect" node_paths=PackedStringArray("BecomeAdmin", "StartTournament", "Label", "Timeout")]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 1
 anchors_preset = 10
@@ -36,6 +36,8 @@ grow_horizontal = 2
 script = ExtResource("4_mbqc8")
 BecomeAdmin = NodePath("BecomeAdmin")
 StartTournament = NodePath("StartTournament")
+Label = NodePath("Label")
+Timeout = NodePath("HSlider")
 
 [node name="BecomeAdmin" type="Button" parent="ColorRect/AdminControls"]
 layout_mode = 2
@@ -44,6 +46,21 @@ text = "Become Admin"
 [node name="StartTournament" type="Button" parent="ColorRect/AdminControls"]
 layout_mode = 2
 text = "Start Tournament"
+
+[node name="Label" type="Label" parent="ColorRect/AdminControls"]
+layout_mode = 2
+text = "Wait To Move: 5.0s "
+
+[node name="HSlider" type="HSlider" parent="ColorRect/AdminControls"]
+custom_minimum_size = Vector2(256, 0)
+layout_mode = 2
+size_flags_vertical = 1
+min_value = 0.1
+max_value = 5.0
+step = 0.2
+value = 5.0
+tick_count = 25
+ticks_on_borders = true
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 1

@@ -6,7 +6,8 @@ public partial class BracketScene : Control
 {
 	[Export] public Tree Players;
 	[Export] public Tree Matches;
-	[Export] public Texture2D JoinButton;
+	[Export] public Texture2D WatchButton;
+	[Export] public Texture2D TerminateKickButton;
 	private const string BOARD_SCENE_PATH = "res://scenes/game.tscn";
 	
 	private List<PlayerData> _playerList;
@@ -26,6 +27,7 @@ public partial class BracketScene : Control
 		Matches.SetColumnTitle(2, "Yellow");
 		Matches.HideRoot = true;
 		Matches.ButtonClicked += WatchGame;
+		Matches.ButtonClicked += TerminateGame;
 		
 		Connection.Instance.OnUpdatedPlayers += UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches += UpdateMatches;
@@ -52,7 +54,7 @@ public partial class BracketScene : Control
 			item.SetText(2, playerList[i].isPlaying ? "Yes" : "No");
 			if (Connection.Instance.IsAdmin)
 			{
-				item.AddButton(0, JoinButton, i, false, "Kick"); // TODO
+				item.AddButton(0, TerminateKickButton, i, false, "Kick"); // TODO
 			}
 		}
 	}
@@ -68,7 +70,11 @@ public partial class BracketScene : Control
 			item.SetText(0, matchList[i].matchId.ToString());
 			item.SetText(1, matchList[i].player1);
 			item.SetText(2, matchList[i].player2);
-			item.AddButton(0, JoinButton, i, false, "Watch");
+			item.AddButton(0, WatchButton, item.GetButtonCount(0), false, "Watch");
+			if (Connection.Instance.IsAdmin)
+			{
+				item.AddButton(0, TerminateKickButton, item.GetButtonCount(0), false, "Terminate");
+			}
 		}
 	}
 
@@ -85,6 +91,14 @@ public partial class BracketScene : Control
 		if (mouseButtonIndex == 1 && column == 0)
 		{
 			Connection.Instance.KickPlayer(_playerList[(int) id].username);
+		} 
+	}
+
+	private void TerminateGame(TreeItem item, long column, long id, long mouseButtonIndex)
+	{
+		if (mouseButtonIndex == 1 && column == 0 && id - 1 > 0 && _matchList[(int) id - 1] != null)
+		{
+			Connection.Instance.TerminateGame(_matchList[(int) id - 1].matchId);
 		} 
 	}
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://qy30emdgrk7o"
-path="res://.godot/imported/YellowChip.png-a8245744c0582bab34b9b96583a57ec0.ctex"
+uid="uid://cdhuhbt2ws5sy"
+path="res://.godot/imported/bracket.png-31c6864ee533d160bca76e6c85f99c4e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/YellowChip.png"
-dest_files=["res://.godot/imported/YellowChip.png-a8245744c0582bab34b9b96583a57ec0.ctex"]
+source_file="res://assets/sprites/bracket.png"
+dest_files=["res://.godot/imported/bracket.png-31c6864ee533d160bca76e6c85f99c4e.ctex"]
 
 [params]
 

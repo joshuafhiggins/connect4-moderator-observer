@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://qy30emdgrk7o"
-path="res://.godot/imported/YellowChip.png-a8245744c0582bab34b9b96583a57ec0.ctex"
+uid="uid://b6iac21s36dku"
+path="res://.godot/imported/player.png-e1eaffe0873063c60a0d0b322e4d87d9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/YellowChip.png"
-dest_files=["res://.godot/imported/YellowChip.png-a8245744c0582bab34b9b96583a57ec0.ctex"]
+source_file="res://assets/sprites/player.png"
+dest_files=["res://.godot/imported/player.png-e1eaffe0873063c60a0d0b322e4d87d9.ctex"]
 
 [params]
 

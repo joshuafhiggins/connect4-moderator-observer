@@ -6,6 +6,8 @@ public partial class AdminControls : HBoxContainer
 {
 	[Export] public Button BecomeAdmin;
 	[Export] public Button StartTournament;
+	[Export] public Label Label;
+	[Export] public Slider Timeout;
 	
 	public override void _Ready()
 	{
@@ -17,6 +19,31 @@ public partial class AdminControls : HBoxContainer
 		{
 			StartTournament.Hide();
 		}
+
+		if (!Connection.Instance.IsAdmin)
+		{
+			Label.Hide();
+			Timeout.Hide();
+		}
+
+		Timeout.Value = Connection.Instance.CurrentWaitTimeout;
+		var time = Connection.Instance.CurrentWaitTimeout.ToString();
+		if (time.Length > 3)
+		{
+			time = time.Substring(0, 3);
+		}
+		
+		Label.Text = "Wait To Move: " + time + "s ";
+		Timeout.ValueChanged += value =>
+		{
+			Connection.Instance.SetTournamentWait((float)value);
+			var time = Connection.Instance.CurrentWaitTimeout.ToString();
+			if (time.Length > 3)
+			{
+				time = time.Substring(0, 3);
+			}
+			Label.Text = "Wait To Move: " + time + "s ";
+		};
 		
 		BecomeAdmin.Pressed += ShowAuthPopup;
 	}
@@ -119,5 +146,7 @@ public partial class AdminControls : HBoxContainer
 		{
 			StartTournament.Show();
 		}
+		Label.Show();
+		Timeout.Show();
 	}
 }

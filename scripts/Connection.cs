@@ -41,7 +41,9 @@ public partial class Connection : Node
 	public bool IsAdmin { get; private set; }
 	public bool IsPlayer { get; private set; }
 	public bool ActiveTournament { get; private set; }
-
+	public List<(string, int)> PreviousMoves { get; private set; } = new List<(string, int)>();
+	public double CurrentWaitTimeout { get; private set; } = 5.0;
+	
 	
 	public MatchData CurrentObservingMatch { get; private set; }
 
@@ -218,15 +220,16 @@ public partial class Connection : Node
 		SendCommand("TOURNAMENT", "START");
 	}
 
-	public void TerminateGame()
+	public void TerminateGame(int matchID)
 	{
 		if (!IsAdmin) return;
-		SendCommand("GAME", "TERMINATE");
+		SendCommand("GAME", "TERMINATE:" + matchID);
 	}
 
 	public void SetTournamentWait(float waitTime)
 	{
 		if (!IsAdmin) return;
+		CurrentWaitTimeout = waitTime;
 		SendCommand("TOURNAMENT", "WAIT:" + waitTime);
 	}
 
@@ -305,6 +308,7 @@ public partial class Connection : Node
 				if (body == "AUTH:ACK")
 				{
 					IsAdmin = true;
+					SetTournamentWait(5.0f);
 					OnBecomeAdmin?.Invoke();
 				}
 
@@ -465,8 +469,24 @@ public partial class Connection : Node
 					OnUpdatedMatches?.Invoke(matches);
 					break;
 				case "WATCH":
-					string[] game = segments[2].Split(",");
-					CurrentObservingMatch = new MatchData(int.Parse(game[0]), game[1], game[2]);
+					CurrentObservingMatch = null;
+					PreviousMoves.Clear();
+					string[] activeMatchData = segments[2].Split("|");
+					if (activeMatchData.IsEmpty())
+					{
+						string[] matchData = segments[2].Split(',');
+						CurrentObservingMatch = new MatchData(int.Parse(matchData[0]), matchData[1], matchData[2]);
+					}
+					else
+					{
+						string[] matchData = activeMatchData[0].Split(',');
+						CurrentObservingMatch = new MatchData(int.Parse(matchData[0]), matchData[1], matchData[2]);
+						for (int i = 1; i < activeMatchData.Length; i++)
+						{
+							string[] moveData = activeMatchData[i].Split(',');
+							PreviousMoves.Add((moveData[0], int.Parse(moveData[1])));
+						}
+					}
 					OnWatchGameAck?.Invoke();
 					break;
 				default:

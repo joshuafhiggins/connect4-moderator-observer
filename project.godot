@@ -10,14 +10,23 @@ config_version=5
 
 [application]
 
-config/name="connect4-moderator-observer"
+config/name="Connect4 Moderator - Observer"
+config/version="0.1.2"
 run/main_scene="uid://dcx5nvs0pa7me"
 config/features=PackedStringArray("4.5", "C#", "Forward Plus")
-config/icon="uid://ckmfi0cjgxgyk"
+boot_splash/image="uid://dd7lvnidxr5ss"
+config/icon="uid://dd7lvnidxr5ss"
 
 [autoload]
 
 Connection="*res://scripts/Connection.cs"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [dotnet]
 
@@ -28,3 +37,5 @@ project/assembly_name="connect4-moderator-observer"
 textures/canvas_textures/default_texture_filter=0
 textures/vram_compression/import_s3tc_bptc=true
 textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_2d=2
+anti_aliasing/quality/msaa_3d=2
