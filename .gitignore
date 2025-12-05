@@ -3,7 +3,9 @@
 /android/
 .idea/
 *.csproj
+*.csproj*
 *.csproj.old
+*.csproj.old*
 *.sln
 *.sln.*
 .DS_Store
