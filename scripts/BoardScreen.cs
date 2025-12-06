@@ -3,7 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public partial class BoardScreen : Node2D {
+public partial class BoardScreen : Node2D
+{
+
+	[Export] private AudioStream endingSfx;
 	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
@@ -24,9 +27,7 @@ public partial class BoardScreen : Node2D {
 	private Node2D player1Card; 
 	private Node2D player2Card;
 	private MatchData matchData;
-
-	private List<(string, int)> moves;
-
+	
 	private RigidBody2D[,] chips = new RigidBody2D[6, 7]; // 6 rows 7 cols | 0, 0 is top left
 
 	// Called when the node enters the scene tree for the first time.
@@ -102,7 +103,6 @@ public partial class BoardScreen : Node2D {
 
 	private void ObserveMove(string username, int column)
 	{
-		GD.Print(username);
 		if (username == matchData.player1)
 		{
 			player1Card.GetNode<Label>("Status").Hide();
@@ -139,6 +139,10 @@ public partial class BoardScreen : Node2D {
 		popup.Size = new Vector2I(200, 100);
 		var text = new Label();
 		text.Text = message;
+		var sfx = new AudioStreamPlayer();
+		sfx.Stream = endingSfx;
+		sfx.VolumeDb = -2;
+		popup.AddChild(sfx);
 		popup.AddChild(text);
 		text.GrowHorizontal = Control.GrowDirection.Both;
 		text.GrowVertical = Control.GrowDirection.Both;
@@ -146,7 +150,9 @@ public partial class BoardScreen : Node2D {
 		text.VerticalAlignment = VerticalAlignment.Center;
 		text.AnchorsPreset = (int) Control.LayoutPreset.FullRect;
 		popup.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
+		popup.PopupHide += () => popup.QueueFree();
 		GetTree().Root.AddChild(popup);
+		sfx.Play();
 		popup.Show();
 		TransitionToBracket();
 	}

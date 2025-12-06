@@ -1,13 +1,25 @@
-[gd_scene load_steps=4 format=3 uid="uid://lruk652t0xe5"]
+[gd_scene load_steps=11 format=3 uid="uid://lruk652t0xe5"]
 
-[ext_resource type="Script" uid="uid://ddg7dv686sbrb" path="res://scripts/yellow_chip.gd" id="1_epi6l"]
+[ext_resource type="Script" uid="uid://dd5nu6037qsr0" path="res://scripts/chip_sfx.gd" id="1_epi6l"]
 [ext_resource type="Texture2D" uid="uid://qy30emdgrk7o" path="res://assets/sprites/YellowChip.png" id="1_eu0sq"]
+[ext_resource type="AudioStream" uid="uid://dauf0pi1pkd3x" path="res://assets/sfx/chip_collide_1.ogg" id="2_ki13g"]
+[ext_resource type="AudioStream" uid="uid://b6b7b7sc038n7" path="res://assets/sfx/chip_collide_2.ogg" id="3_kic5w"]
+[ext_resource type="AudioStream" uid="uid://c6a4wqoopu53j" path="res://assets/sfx/chip_collide_3.ogg" id="4_nbcpr"]
+[ext_resource type="AudioStream" uid="uid://5liedrachob2" path="res://assets/sfx/chip_collide_4.ogg" id="5_wq2sm"]
+[ext_resource type="AudioStream" uid="uid://dsyovynhhbmw8" path="res://assets/sfx/chip_collide_5.ogg" id="6_ik045"]
+[ext_resource type="AudioStream" uid="uid://c0a5rl5q04noq" path="res://assets/sfx/chip_collide_6.ogg" id="7_evobg"]
+[ext_resource type="AudioStream" uid="uid://b6d73wiiqxles" path="res://assets/sfx/chip_collide_7.ogg" id="8_b44ux"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_epi6l"]
-radius = 13.004272
+radius = 12.8
 
-[node name="YellowChip" type="RigidBody2D"]
+[node name="YellowChip" type="RigidBody2D" node_paths=PackedStringArray("audio_stream_player_2d")]
+lock_rotation = true
+contact_monitor = true
+max_contacts_reported = 3
 script = ExtResource("1_epi6l")
+audio_stream_player_2d = NodePath("AudioStreamPlayer2D")
+sounds = Array[AudioStream]([ExtResource("2_ki13g"), ExtResource("3_kic5w"), ExtResource("4_nbcpr"), ExtResource("5_wq2sm"), ExtResource("6_ik045"), ExtResource("7_evobg"), ExtResource("8_b44ux")])
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(3, 3)
@@ -16,3 +28,8 @@ texture = ExtResource("1_eu0sq")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 scale = Vector2(3, 3)
 shape = SubResource("CircleShape2D_epi6l")
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
+volume_db = -5.0
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
