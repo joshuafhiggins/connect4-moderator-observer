@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public partial class BoardScreen : Node2D {
 	
@@ -43,6 +44,22 @@ public partial class BoardScreen : Node2D {
 		matchData = Connection.Instance.CurrentObservingMatch;
 		player1Card.GetNode<Label>("Name").Text = matchData.player1;
 		player2Card.GetNode<Label>("Name").Text = matchData.player2;
+
+		if (Connection.Instance.PreviousMoves.Count == 0)
+		{
+			player1Card.GetNode<Label>("Status").Show();
+			player2Card.GetNode<Label>("Status").Hide();
+		}
+		else if (Connection.Instance.PreviousMoves.Last().Item1 == matchData.player1)
+		{
+			player1Card.GetNode<Label>("Status").Hide();
+			player2Card.GetNode<Label>("Status").Show();
+		}
+		else
+		{
+			player1Card.GetNode<Label>("Status").Show();
+			player2Card.GetNode<Label>("Status").Hide();
+		}
 		
 		Connection.Instance.OnObserveWin += ObserveWin;
 		Connection.Instance.OnObserveDraw += ObserveDraw;
@@ -85,6 +102,17 @@ public partial class BoardScreen : Node2D {
 
 	private void ObserveMove(string username, int column)
 	{
+		GD.Print(username);
+		if (username == matchData.player1)
+		{
+			player1Card.GetNode<Label>("Status").Hide();
+			player2Card.GetNode<Label>("Status").Show();
+		}
+		else
+		{
+			player1Card.GetNode<Label>("Status").Show();
+			player2Card.GetNode<Label>("Status").Hide();
+		}
 		Connection.Instance.PreviousMoves.Add((username, column));
 	}
 

@@ -1,10 +1,11 @@
-[gd_scene load_steps=14 format=3 uid="uid://m542qwlp7hl7"]
+[gd_scene load_steps=15 format=3 uid="uid://m542qwlp7hl7"]
 
 [ext_resource type="Script" uid="uid://dg5jt0o0r0v3r" path="res://scripts/BoardScreen.cs" id="1_b3w8x"]
 [ext_resource type="Texture2D" uid="uid://dlx02qat7j6lf" path="res://assets/sprites/AssetTileset.png" id="3_1tlhv"]
 [ext_resource type="FontFile" uid="uid://c3jmev24lo6ci" path="res://assets/fonts/PixelOperator8.ttf" id="3_rjcmr"]
 [ext_resource type="Texture2D" uid="uid://ckmfi0cjgxgyk" path="res://assets/sprites/RedChip.png" id="4_1hrcj"]
 [ext_resource type="Texture2D" uid="uid://qy30emdgrk7o" path="res://assets/sprites/YellowChip.png" id="5_i2o8i"]
+[ext_resource type="Script" uid="uid://cwfg17tdbk44b" path="res://scripts/thinking.gd" id="5_wjs8a"]
 [ext_resource type="Texture2D" uid="uid://8un28mol7qow" path="res://assets/sprites/BoardTileMap.png" id="6_i2o8i"]
 [ext_resource type="PackedScene" uid="uid://pdean68jjg80" path="res://scenes/button_small.tscn" id="7_glh1q"]
 [ext_resource type="Script" uid="uid://b3q4gq63qmx23" path="res://scripts/BackButton.cs" id="8_u1oi2"]
@@ -116,10 +117,10 @@ offset_left = -529.0
 offset_top = -292.0
 offset_right = -427.0
 offset_bottom = -284.0
-theme_override_colors/font_color = Color(1, 0, 0, 1)
 theme_override_fonts/font = ExtResource("3_rjcmr")
 theme_override_font_sizes/font_size = 8
-text = "NOT READY"
+text = "THINKING"
+script = ExtResource("5_wjs8a")
 
 [node name="Player2Card" type="Node2D" parent="."]
 position = Vector2(989, -64)
@@ -163,10 +164,10 @@ offset_left = -530.0
 offset_top = -220.0
 offset_right = -428.0
 offset_bottom = -212.0
-theme_override_colors/font_color = Color(1, 0, 0, 1)
 theme_override_fonts/font = ExtResource("3_rjcmr")
 theme_override_font_sizes/font_size = 8
-text = "NOT READY"
+text = "THINKING"
+script = ExtResource("5_wjs8a")
 
 [node name="TileMap" type="TileMap" parent="."]
 position = Vector2(39, 200)
