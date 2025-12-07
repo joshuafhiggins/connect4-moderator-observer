@@ -1,9 +1,32 @@
-[gd_scene load_steps=3 format=3 uid="uid://cr8fi0e4r88s8"]
+[gd_scene load_steps=5 format=3 uid="uid://cr8fi0e4r88s8"]
 
 [ext_resource type="PackedScene" uid="uid://cct663hb47yka" path="res://scenes/create_join_room.tscn" id="1_yqjtg"]
 [ext_resource type="PackedScene" uid="uid://m542qwlp7hl7" path="res://scenes/board_screen.tscn" id="2_lnu2h"]
 
+[sub_resource type="Gradient" id="Gradient_wu84c"]
+colors = PackedColorArray(0, 0.07058824, 0.101960786, 1, 0.39215687, 0.39215687, 0.39215687, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_yqjtg"]
+gradient = SubResource("Gradient_wu84c")
+width = 1024
+height = 1024
+fill_from = Vector2(0.5, 1)
+fill_to = Vector2(0.5, 0)
+metadata/_snap_enabled = true
+
 [node name="Game" type="Node2D"]
+
+[node name="Background" type="TextureRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -659.0
+offset_top = -558.0
+offset_right = 619.0
+offset_bottom = 466.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_yqjtg")
 
 [node name="GameManager" type="Node" parent="."]
 

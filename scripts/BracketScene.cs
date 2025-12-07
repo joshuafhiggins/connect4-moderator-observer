@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 
 public partial class BracketScene : Control
@@ -32,6 +31,8 @@ public partial class BracketScene : Control
 		Connection.Instance.OnUpdatedPlayers += UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches += UpdateMatches;
 		Connection.Instance.OnWatchGameAck += TransitionToBoard;
+		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
+		Connection.Instance.OnWSDisconnect += () => GetTree().ChangeSceneToFile("res://scenes/main_menu.tscn");
 	}
 
 	public override void _ExitTree()
@@ -39,6 +40,7 @@ public partial class BracketScene : Control
 		Connection.Instance.OnUpdatedPlayers -= UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches -= UpdateMatches;
 		Connection.Instance.OnWatchGameAck -= TransitionToBoard;
+		Connection.Instance.OnTournamentEnd -= ShowTournamentScoreboard;
 	}
 
 	private void UpdatePlayers(List<PlayerData> playerList)
@@ -105,5 +107,40 @@ public partial class BracketScene : Control
 	private void TransitionToBoard()
 	{
 		GetTree().ChangeSceneToFile(BOARD_SCENE_PATH);
+	}
+	
+	private void ShowTournamentScoreboard(List<(string, int)> playerScoreboard)
+	{
+		var scoreboardWindow = new Window();
+		scoreboardWindow.Theme = GD.Load<Theme>("res://assets/theme.tres");
+		scoreboardWindow.AlwaysOnTop = true;
+		scoreboardWindow.MaximizeDisabled = true;
+		scoreboardWindow.Unresizable = true;
+		scoreboardWindow.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
+		scoreboardWindow.Size = new Vector2I(256, 512);
+		scoreboardWindow.CloseRequested += () =>
+		{
+			GetTree().Root.RemoveChild(scoreboardWindow);
+		};
+		
+		var tree = new Tree();
+		tree.HideRoot = true;
+		tree.Columns = 2;
+		tree.ColumnTitlesVisible = true;
+		tree.Theme = GD.Load<Theme>("res://assets/theme.tres");
+		tree.SetColumnTitle(0, "Player");
+		tree.SetColumnTitle(1, "Score");
+		var root = tree.CreateItem();
+		
+		foreach ((string, int) entry in playerScoreboard)
+		{
+			var item = tree.CreateItem(root);
+			item.SetText(0, entry.Item1);
+			item.SetText(1, entry.Item2.ToString());
+		}
+		
+		scoreboardWindow.AddChild(tree);
+		
+		GetTree().Root.AddChild(scoreboardWindow);
 	}
 }

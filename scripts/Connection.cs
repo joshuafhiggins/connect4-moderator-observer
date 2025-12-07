@@ -9,8 +9,7 @@ public partial class Connection : Node
 
 	public static Connection Instance { get; private set; }
 
-	private WebSocketPeer _webSocket = new WebSocketPeer();
-	private bool _firstConnect = true;
+	private WebSocketPeer _webSocket = new ();
 	private Thread _gameListThread;
 	private bool _gameListThreadRunning;
 
@@ -33,21 +32,29 @@ public partial class Connection : Node
 	public event Action OnStartTournamentAck;
 	public event Action<List<(string, int)>> OnTournamentEnd;
 	public event Action OnBecomeAdmin;
-	
+
+	public event Action OnWSConnectionSuccess;
+	public event Action OnWSConnectionFailed;
+	public event Action OnWSDisconnect;
 
 	// Already prints to console
-	public event Action<string, string> OnError;
+	public event Action<string> OnError;
 
 	public bool IsAdmin { get; private set; }
 	public bool IsPlayer { get; private set; }
 	public bool ActiveTournament { get; private set; }
-	public List<(string, int)> PreviousMoves { get; private set; } = new List<(string, int)>();
+	public List<(string, int)> PreviousMoves { get; private set; } = [];
 	public double CurrentWaitTimeout { get; private set; } = 5.0;
 	
 	
 	public MatchData CurrentObservingMatch { get; private set; }
 
 	private bool IsSocketOpen => _webSocket.GetReadyState() == WebSocketPeer.State.Open;
+
+	private bool _connecting = false;
+	private bool _connected = false;
+
+	public String LastError = "";
 
 	public override void _Ready()
 	{
@@ -56,37 +63,19 @@ public partial class Connection : Node
 		_webSocket.HeartbeatInterval = 5.0;
 	}
 
-	public bool Connect(string address)
+	public void Connect(string address)
 	{
-		if (_webSocket.GetReadyState() == WebSocketPeer.State.Open)
+		_connecting = true;
+		if (_connected)
 		{
-			return false;
+			return;
 		}
 
 		Error error = _webSocket.ConnectToUrl(address);
 		if (error != Error.Ok)
 		{
-			return false;
+			LastError = error.ToString();
 		}
-
-		_webSocket.Poll();
-
-		while (_webSocket.GetReadyState() == WebSocketPeer.State.Connecting)
-		{
-			_webSocket.Poll();
-			Thread.Sleep(TimeSpan.FromMilliseconds(5));
-		}
-
-		if (_webSocket.GetReadyState() != WebSocketPeer.State.Open)
-		{
-			return false;
-		}
-
-		_webSocket.SetHeartbeatInterval(5.0);
-		_webSocket.HeartbeatInterval = 5.0;
-		_firstConnect = false;
-		StartGameListRefreshLoop();
-		return true;
 	}
 
 	public override void _ExitTree()
@@ -94,23 +83,49 @@ public partial class Connection : Node
 		StopGameListRefreshLoop();
 	}
 
-	public override void _PhysicsProcess(double delta)
+	public override void _Process(double delta)
 	{
 		_webSocket.Poll();
 		WebSocketPeer.State state = _webSocket.GetReadyState();
-		if ((state == WebSocketPeer.State.Closed || state == WebSocketPeer.State.Closing) && !_firstConnect)
+		if (state == WebSocketPeer.State.Open)
 		{
-			StopGameListRefreshLoop();
-			GD.PrintErr("Connection lost.");
-			//GetTree().Quit();
-		}
-
-		if (IsSocketOpen)
-		{
+			if (_connecting)
+			{
+				_connecting = false;
+				_connected = true;
+				OnWSConnectionSuccess?.Invoke();
+				StartGameListRefreshLoop();
+			}
+			
 			while (_webSocket.GetAvailablePacketCount() > 0)
 			{
 				string message = _webSocket.GetPacket().GetStringFromUtf8();
 				HandleServerMessage(message);
+			}
+		} 
+		else if (state == WebSocketPeer.State.Connecting)
+		{
+			// Do nothing
+		}
+		else if (state == WebSocketPeer.State.Closing)
+		{
+			// Do nothing
+		}
+		else if (state == WebSocketPeer.State.Closed)
+		{
+			if (_connecting)
+			{
+				_connecting = false;
+				OnWSConnectionFailed?.Invoke();
+			}
+			else if (_connected)
+			{
+				_connected = false;
+				StopGameListRefreshLoop();
+				var code = _webSocket.GetCloseCode();
+				var reason = _webSocket.GetCloseReason();
+				GD.PrintErr("WebSocket closed with code: " + code + ", reason " + reason + ". Clean: " + (code != -1));
+				OnWSDisconnect?.Invoke();
 			}
 		}
 	}
@@ -220,6 +235,12 @@ public partial class Connection : Node
 		SendCommand("TOURNAMENT", "START");
 	}
 
+	public void CancelTournament()
+	{
+		if (!IsAdmin) return;
+		SendCommand("TOURNAMENT", "CANCEL");
+	}
+
 	public void TerminateGame(int matchID)
 	{
 		if (!IsAdmin) return;
@@ -317,8 +338,8 @@ public partial class Connection : Node
 				HandleTournamentMessage(body);
 				break;
 			case "ERROR":
-				HandleErrorMessage(body);
-				GD.PrintErr($"Error: {body}");
+				GD.PrintErr(message);
+				OnError?.Invoke(message);
 				break;
 			default:
 				GD.Print($"Unhandled server message: {message}");
@@ -494,20 +515,5 @@ public partial class Connection : Node
 					break;
 			}
 		}
-	}
-
-	private void HandleErrorMessage(string body)
-	{
-		if (string.IsNullOrWhiteSpace(body))
-		{
-			OnError?.Invoke("UNKNOWN", string.Empty);
-			return;
-		}
-
-		string[] segments = body.Split(':');
-		string code = segments.Length > 0 ? segments[0].Trim().ToUpperInvariant() : "UNKNOWN";
-		string detail = segments.Length > 1 ? string.Join(":", segments, 1, segments.Length - 1).Trim() : string.Empty;
-
-		OnError?.Invoke(code, detail);
 	}
 }

@@ -1,7 +1,20 @@
-[gd_scene load_steps=3 format=3 uid="uid://dcx5nvs0pa7me"]
+[gd_scene load_steps=7 format=3 uid="uid://dcx5nvs0pa7me"]
 
 [ext_resource type="Script" uid="uid://bk22f71oximjk" path="res://scripts/AddressUI.cs" id="1_l6cm7"]
+[ext_resource type="Theme" uid="uid://bbgxacei1vwba" path="res://assets/theme.tres" id="1_wu84c"]
 [ext_resource type="Script" uid="uid://cpjbiqn26khck" path="res://scripts/ConnectButtonUI.cs" id="2_ekxnf"]
+[ext_resource type="Texture2D" uid="uid://uritd4ygetrk" path="res://assets/sprites/rpi.png" id="3_bqqt6"]
+
+[sub_resource type="Gradient" id="Gradient_wu84c"]
+colors = PackedColorArray(0, 0.07058824, 0.101960786, 1, 0.39215687, 0.39215687, 0.39215687, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_yqjtg"]
+gradient = SubResource("Gradient_wu84c")
+width = 1024
+height = 1024
+fill_from = Vector2(0.5, 1)
+fill_to = Vector2(0.5, 0)
+metadata/_snap_enabled = true
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -10,6 +23,63 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_yqjtg")
+
+[node name="RPI Minds and Machines" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -193.5
+offset_top = 128.0
+offset_right = 193.5
+offset_bottom = 152.0
+grow_horizontal = 2
+theme = ExtResource("1_wu84c")
+theme_type_variation = &"HeaderMedium"
+text = "RPI Minds & Machines"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Connect" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 200.0
+offset_right = 68.00122
+offset_bottom = 229.0
+grow_horizontal = 2
+theme = ExtResource("1_wu84c")
+theme_type_variation = &"HeaderLarge"
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 16
+text = "Connect"
+
+[node name="4" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 78.0
+offset_top = 200.0
+offset_right = 118.00116
+offset_bottom = 229.0
+grow_horizontal = 2
+theme = ExtResource("1_wu84c")
+theme_type_variation = &"HeaderLarge"
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 16
+text = "4"
 
 [node name="Address" type="TextEdit" parent="."]
 layout_mode = 1
@@ -24,10 +94,13 @@ offset_right = 250.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_wu84c")
 placeholder_text = "Server Address"
+emoji_menu_enabled = false
+scroll_smooth = true
 script = ExtResource("1_l6cm7")
 
-[node name="Button" type="Button" parent="." node_paths=PackedStringArray("AddressUi", "ErrorLabel")]
+[node name="Button" type="Button" parent="." node_paths=PackedStringArray("AddressField", "ErrorLabel")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -40,9 +113,10 @@ offset_right = 250.0
 offset_bottom = 67.25
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_wu84c")
 text = "Connect"
 script = ExtResource("2_ekxnf")
-AddressUi = NodePath("../Address")
+AddressField = NodePath("../Address")
 ErrorLabel = NodePath("../Label")
 
 [node name="Label" type="Label" parent="."]
@@ -58,4 +132,17 @@ offset_right = 68.5
 offset_bottom = 98.149994
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_wu84c")
 theme_override_colors/font_color = Color(1, 0, 0, 1)
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = -69.0
+offset_right = 69.0
+offset_bottom = -5.0
+grow_vertical = 0
+texture = ExtResource("3_bqqt6")

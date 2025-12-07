@@ -1,0 +1,6 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://bbgxacei1vwba"]
+
+[ext_resource type="FontFile" uid="uid://c3jmev24lo6ci" path="res://assets/fonts/PixelOperator8.ttf" id="1_5x3i2"]
+
+[resource]
+default_font = ExtResource("1_5x3i2")

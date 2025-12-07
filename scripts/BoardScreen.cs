@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,6 +6,7 @@ public partial class BoardScreen : Node2D
 {
 
 	[Export] private AudioStream endingSfx;
+	[Export] private Theme theme;
 	
 	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
 	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
@@ -29,6 +29,10 @@ public partial class BoardScreen : Node2D
 	private MatchData matchData;
 	
 	private RigidBody2D[,] chips = new RigidBody2D[6, 7]; // 6 rows 7 cols | 0, 0 is top left
+
+	private bool _lastMove = false;
+	private float _lastMoveTimer = 2.5f;
+	private string _winner = "";
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready() {
@@ -62,11 +66,12 @@ public partial class BoardScreen : Node2D
 			player2Card.GetNode<Label>("Status").Hide();
 		}
 		
-		Connection.Instance.OnObserveWin += ObserveWin;
-		Connection.Instance.OnObserveDraw += ObserveDraw;
-		Connection.Instance.OnObserveTerminated += ObserveTerminated;
+		Connection.Instance.OnObserveWin += winner => { _lastMove = true; _winner = winner; };
+		Connection.Instance.OnObserveDraw += () => _lastMove = true;
+		Connection.Instance.OnObserveTerminated += () => PopupMessage("Match Terminated");
 		Connection.Instance.OnObserveMove += ObserveMove;
 		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
+		Connection.Instance.OnWSDisconnect += () => GetTree().ChangeSceneToFile("res://scenes/main_menu.tscn");
 	}
 
 	public override void _Process(double delta)
@@ -90,13 +95,27 @@ public partial class BoardScreen : Node2D
 		{
 			currentTimeout -= delta;
 		}
+
+		if (_lastMove)
+		{
+			_lastMoveTimer -= (float) delta;
+		}
+
+		if (_lastMoveTimer <= 0.0f)
+		{
+			if (_winner == "")
+			{
+				PopupMessage("Draw!");
+			}
+			else
+			{
+				PopupMessage(_winner + " wins!");
+			}
+		}
 	}
 
 	public override void _ExitTree()
 	{
-		Connection.Instance.OnObserveWin -= ObserveWin;
-		Connection.Instance.OnObserveDraw -= ObserveDraw;
-		Connection.Instance.OnObserveTerminated -= ObserveTerminated;
 		Connection.Instance.OnObserveMove -= ObserveMove;
 		Connection.Instance.OnTournamentEnd -= ShowTournamentScoreboard;
 	}
@@ -116,27 +135,13 @@ public partial class BoardScreen : Node2D
 		Connection.Instance.PreviousMoves.Add((username, column));
 	}
 
-	private void ObserveWin(string winner)
-	{
-		PopupMessage(winner + " wins!");
-	}
-	
-	private void ObserveDraw()
-	{
-		PopupMessage("Draw!");
-	}
-	
-	private void ObserveTerminated()
-	{
-		PopupMessage("Match Terminated");
-	}
-
 	private void PopupMessage(string message)
 	{
 		var popup = new Popup();
 		popup.AlwaysOnTop = true;
 		popup.PopupCentered();
 		popup.Size = new Vector2I(200, 100);
+		popup.Theme = GD.Load<Theme>("res://assets/theme.tres");
 		var text = new Label();
 		text.Text = message;
 		var sfx = new AudioStreamPlayer();
