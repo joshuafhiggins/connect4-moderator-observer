@@ -4,7 +4,6 @@ using System.Linq;
 
 public partial class BoardScreen : Node2D
 {
-
 	[Export] private AudioStream endingSfx;
 	[Export] private Theme theme;
 	
@@ -71,7 +70,6 @@ public partial class BoardScreen : Node2D
 		Connection.Instance.OnObserveTerminated += () => PopupMessage("Match Terminated");
 		Connection.Instance.OnObserveMove += ObserveMove;
 		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
-		Connection.Instance.OnWSDisconnect += () => GetTree().ChangeSceneToFile("res://scenes/main_menu.tscn");
 	}
 
 	public override void _Process(double delta)
@@ -139,7 +137,6 @@ public partial class BoardScreen : Node2D
 	{
 		var popup = new Popup();
 		popup.AlwaysOnTop = true;
-		popup.PopupCentered();
 		popup.Size = new Vector2I(200, 100);
 		popup.Theme = GD.Load<Theme>("res://assets/theme.tres");
 		var text = new Label();
@@ -157,6 +154,7 @@ public partial class BoardScreen : Node2D
 		popup.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
 		popup.PopupHide += () => popup.QueueFree();
 		GetTree().Root.AddChild(popup);
+		popup.PopupCentered();
 		sfx.Play();
 		popup.Show();
 		TransitionToBracket();

@@ -33,9 +33,9 @@ public partial class Connection : Node
 	public event Action<List<(string, int)>> OnTournamentEnd;
 	public event Action OnBecomeAdmin;
 
-	public event Action OnWSConnectionSuccess;
-	public event Action OnWSConnectionFailed;
-	public event Action OnWSDisconnect;
+	public event Action OnWsConnectionSuccess;
+	public event Action OnWsConnectionFailed;
+	public event Action OnWsDisconnect;
 
 	// Already prints to console
 	public event Action<string> OnError;
@@ -61,6 +61,7 @@ public partial class Connection : Node
 		Instance = this;
 		_webSocket.SetHeartbeatInterval(5.0);
 		_webSocket.HeartbeatInterval = 5.0;
+		Instance.OnWsDisconnect += () => GetTree().ChangeSceneToFile("res://scenes/main_menu.tscn");
 	}
 
 	public void Connect(string address)
@@ -93,7 +94,7 @@ public partial class Connection : Node
 			{
 				_connecting = false;
 				_connected = true;
-				OnWSConnectionSuccess?.Invoke();
+				OnWsConnectionSuccess?.Invoke();
 				StartGameListRefreshLoop();
 			}
 			
@@ -116,7 +117,7 @@ public partial class Connection : Node
 			if (_connecting)
 			{
 				_connecting = false;
-				OnWSConnectionFailed?.Invoke();
+				OnWsConnectionFailed?.Invoke();
 			}
 			else if (_connected)
 			{
@@ -125,7 +126,7 @@ public partial class Connection : Node
 				var code = _webSocket.GetCloseCode();
 				var reason = _webSocket.GetCloseReason();
 				GD.PrintErr("WebSocket closed with code: " + code + ", reason " + reason + ". Clean: " + (code != -1));
-				OnWSDisconnect?.Invoke();
+				OnWsDisconnect?.Invoke();
 			}
 		}
 	}

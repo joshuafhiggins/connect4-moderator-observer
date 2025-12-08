@@ -32,7 +32,6 @@ public partial class BracketScene : Control
 		Connection.Instance.OnUpdatedMatches += UpdateMatches;
 		Connection.Instance.OnWatchGameAck += TransitionToBoard;
 		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
-		Connection.Instance.OnWSDisconnect += () => GetTree().ChangeSceneToFile("res://scenes/main_menu.tscn");
 	}
 
 	public override void _ExitTree()

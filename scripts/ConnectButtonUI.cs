@@ -8,8 +8,8 @@ public partial class ConnectButtonUI : Button
 
 	public override void _Ready()
 	{
-		Connection.Instance.OnWSConnectionSuccess += () => GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
-		Connection.Instance.OnWSConnectionFailed += () => ErrorLabel.Text = "Couldn't connect to server! " + Connection.Instance.LastError;
+		Connection.Instance.OnWsConnectionSuccess += () => GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
+		Connection.Instance.OnWsConnectionFailed += () => ErrorLabel.Text = "Couldn't connect to server! " + Connection.Instance.LastError;
 	}
 
 	public override void _Pressed()
