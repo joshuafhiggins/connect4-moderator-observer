@@ -1,5 +1,4 @@
 using Godot;
-using System.Collections.Generic;
 using System.Linq;
 
 public partial class BoardScreen : Node2D
@@ -65,11 +64,10 @@ public partial class BoardScreen : Node2D
 			player2Card.GetNode<Label>("Status").Hide();
 		}
 		
-		Connection.Instance.OnObserveWin += winner => { _lastMove = true; _winner = winner; };
-		Connection.Instance.OnObserveDraw += () => _lastMove = true;
-		Connection.Instance.OnObserveTerminated += () => PopupMessage("Match Terminated");
+		Connection.Instance.OnObserveWin += OnObserveWin;
+		Connection.Instance.OnObserveDraw += OnObserveDraw;
+		Connection.Instance.OnObserveTerminated += OnObserveTerminated;
 		Connection.Instance.OnObserveMove += ObserveMove;
-		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
 	}
 
 	public override void _Process(double delta)
@@ -114,20 +112,46 @@ public partial class BoardScreen : Node2D
 
 	public override void _ExitTree()
 	{
+		Connection.Instance.OnObserveWin -= OnObserveWin;
+		Connection.Instance.OnObserveDraw -= OnObserveDraw;
+		Connection.Instance.OnObserveTerminated -= OnObserveTerminated;
 		Connection.Instance.OnObserveMove -= ObserveMove;
-		Connection.Instance.OnTournamentEnd -= ShowTournamentScoreboard;
 	}
 
+	private void OnObserveWin(string winner)
+	{
+		_lastMove = true; 
+		_winner = winner;
+		player1Card.GetNode<Label>("Status").Hide();
+		player2Card.GetNode<Label>("Status").Hide();
+	}
+
+	private void OnObserveDraw()
+	{
+		_lastMove = true;
+		player1Card.GetNode<Label>("Status").Hide();
+		player2Card.GetNode<Label>("Status").Hide();
+	}
+
+	private void OnObserveTerminated()
+	{
+		PopupMessage("Match Terminated");
+		player1Card.GetNode<Label>("Status").Hide();
+		player2Card.GetNode<Label>("Status").Hide();
+	}
+	
 	private void ObserveMove(string username, int column)
 	{
 		if (username == matchData.player1)
 		{
+			if (!_lastMove)
+				player2Card.GetNode<Label>("Status").Show();
 			player1Card.GetNode<Label>("Status").Hide();
-			player2Card.GetNode<Label>("Status").Show();
 		}
 		else
 		{
-			player1Card.GetNode<Label>("Status").Show();
+			if (!_lastMove)
+				player1Card.GetNode<Label>("Status").Show();
 			player2Card.GetNode<Label>("Status").Hide();
 		}
 		Connection.Instance.PreviousMoves.Add((username, column));
@@ -158,39 +182,6 @@ public partial class BoardScreen : Node2D
 		sfx.Play();
 		popup.Show();
 		TransitionToBracket();
-	}
-	
-	private void ShowTournamentScoreboard(List<(string, int)> playerScoreboard)
-	{
-		var scoreboardWindow = new Window();
-		scoreboardWindow.AlwaysOnTop = true;
-		scoreboardWindow.MaximizeDisabled = true;
-		scoreboardWindow.Unresizable = true;
-		scoreboardWindow.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
-		scoreboardWindow.Size = new Vector2I(256, 512);
-		scoreboardWindow.CloseRequested += () =>
-		{
-			GetTree().Root.RemoveChild(scoreboardWindow);
-		};
-		
-		var tree = new Tree();
-		tree.HideRoot = true;
-		tree.Columns = 2;
-		tree.ColumnTitlesVisible = true;
-		tree.SetColumnTitle(0, "Player");
-		tree.SetColumnTitle(1, "Score");
-		var root = tree.CreateItem();
-		
-		foreach ((string, int) entry in playerScoreboard)
-		{
-			var item = tree.CreateItem(root);
-			item.SetText(0, entry.Item1);
-			item.SetText(1, entry.Item2.ToString());
-		}
-		
-		scoreboardWindow.AddChild(tree);
-		
-		GetTree().Root.AddChild(scoreboardWindow);
 	}
 	
 	private void TransitionToBracket()

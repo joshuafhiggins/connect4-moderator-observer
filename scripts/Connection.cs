@@ -30,8 +30,10 @@ public partial class Connection : Node
 	public event Action<List<MatchData>> OnUpdatedMatches;
 	public event Action<List<PlayerData>> OnUpdatedPlayers;
 	public event Action OnStartTournamentAck;
-	public event Action<List<(string, int)>> OnTournamentEnd;
+	public event Action OnTournamentEnd;
+	public event Action OnCancelTournamentAck;
 	public event Action OnBecomeAdmin;
+	public event Action OnGetDataAcks;
 
 	public event Action OnWsConnectionSuccess;
 	public event Action OnWsConnectionFailed;
@@ -43,18 +45,19 @@ public partial class Connection : Node
 	public bool IsAdmin { get; private set; }
 	public bool IsPlayer { get; private set; }
 	public bool ActiveTournament { get; private set; }
+	public bool DemoMode { get; private set; }
 	public List<(string, int)> PreviousMoves { get; private set; } = [];
 	public double CurrentWaitTimeout { get; private set; } = 5.0;
-	
-	
 	public MatchData CurrentObservingMatch { get; private set; }
+	public string LastUsedConnectionAddress { get; private set; } = "";
+	public string LastError { get; private set; } = "";
 
 	private bool IsSocketOpen => _webSocket.GetReadyState() == WebSocketPeer.State.Open;
 
 	private bool _connecting = false;
 	private bool _connected = false;
-
-	public String LastError = "";
+	private List<(string, int)> _lastScoreboard = [];
+	private bool _shouldShowTournamentResults = false;
 
 	public override void _Ready()
 	{
@@ -67,6 +70,7 @@ public partial class Connection : Node
 	public void Connect(string address)
 	{
 		_connecting = true;
+		LastUsedConnectionAddress = address;
 		if (_connected)
 		{
 			return;
@@ -94,6 +98,7 @@ public partial class Connection : Node
 			{
 				_connecting = false;
 				_connected = true;
+				LastError = "";
 				OnWsConnectionSuccess?.Invoke();
 				StartGameListRefreshLoop();
 			}
@@ -102,6 +107,19 @@ public partial class Connection : Node
 			{
 				string message = _webSocket.GetPacket().GetStringFromUtf8();
 				HandleServerMessage(message);
+			}
+
+			if (_shouldShowTournamentResults)
+			{
+				var children = GetTree().Root.GetChildren();
+				foreach (var child in children)
+				{
+					if (child.Name.ToString() == "BracketView")
+					{
+						_shouldShowTournamentResults = false;
+						ShowTournamentScoreboard(_lastScoreboard);
+					}
+				}
 			}
 		} 
 		else if (state == WebSocketPeer.State.Connecting)
@@ -122,9 +140,14 @@ public partial class Connection : Node
 			else if (_connected)
 			{
 				_connected = false;
+				IsAdmin = false;
+				CurrentWaitTimeout = 5.0;
+				ActiveTournament = false;
+				DemoMode = false;
 				StopGameListRefreshLoop();
 				var code = _webSocket.GetCloseCode();
 				var reason = _webSocket.GetCloseReason();
+				LastError = "Unexpected Disconnect. Reason: " + reason +  ", Code: " + code;
 				GD.PrintErr("WebSocket closed with code: " + code + ", reason " + reason + ". Clean: " + (code != -1));
 				OnWsDisconnect?.Invoke();
 			}
@@ -220,6 +243,16 @@ public partial class Connection : Node
 	{
 		if (IsAdmin) return;
 		SendCommand("ADMIN", "AUTH:" + password);
+	}
+
+	public void GetMoveWait()
+	{
+		SendCommand("GET", "MOVE_WAIT");
+	}
+
+	public void GetTournamentStatus()
+	{
+		SendCommand("GET", "TOURNAMENT_STATUS");
 	}
 
 
@@ -330,13 +363,34 @@ public partial class Connection : Node
 				if (body == "AUTH:ACK")
 				{
 					IsAdmin = true;
-					SetTournamentWait(5.0f);
+					GetMoveWait();
+					GetTournamentStatus();
 					OnBecomeAdmin?.Invoke();
 				}
 
 				break;
 			case "TOURNAMENT":
 				HandleTournamentMessage(body);
+				break;
+			case "GET":
+				if (body.StartsWith("MOVE_WAIT"))
+				{
+					CurrentWaitTimeout = double.Parse(body.Split(":")[1]);
+				} 
+				else if (body.StartsWith("TOURNAMENT_STATUS"))
+				{
+					string status = body.Split(":")[1];
+					if (status != "DEMO")
+					{
+						ActiveTournament = bool.Parse(status);
+					}
+					else
+					{
+						ActiveTournament = false;
+						DemoMode = true;
+					}
+				}
+				OnGetDataAcks?.Invoke();
 				break;
 			case "ERROR":
 				GD.PrintErr(message);
@@ -372,13 +426,21 @@ public partial class Connection : Node
 					playerScoreboard.Add((data[0], int.Parse(data[1])));
 				}
 
-				OnTournamentEnd?.Invoke(playerScoreboard);
+				_lastScoreboard = playerScoreboard;
+				_shouldShowTournamentResults = true;
+				OnTournamentEnd?.Invoke();
 				break;
 			}
 			case "START":
 			{
 				OnStartTournamentAck?.Invoke();
 				ActiveTournament = true;
+				break;
+			}
+			case "CANCEL":
+			{
+				ActiveTournament = false;
+				OnCancelTournamentAck?.Invoke();
 				break;
 			}
 		}
@@ -516,5 +578,43 @@ public partial class Connection : Node
 					break;
 			}
 		}
+	}
+	
+	public void ShowTournamentScoreboard(List<(string, int)> playerScoreboard)
+	{
+		var scoreboardWindow = new Window();
+		scoreboardWindow.Theme = GD.Load<Theme>("res://assets/theme.tres");
+		scoreboardWindow.AlwaysOnTop = true;
+		scoreboardWindow.MaximizeDisabled = true;
+		scoreboardWindow.Unresizable = true;
+		scoreboardWindow.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
+		scoreboardWindow.Size = new Vector2I(256, 512);
+		scoreboardWindow.CloseRequested += () =>
+		{
+			GetTree().Root.RemoveChild(scoreboardWindow);
+		};
+		
+		var tree = new Tree();
+		tree.HideRoot = true;
+		tree.Columns = 2;
+		tree.ColumnTitlesVisible = true;
+		tree.Theme = GD.Load<Theme>("res://assets/theme.tres");
+		tree.GrowHorizontal = Control.GrowDirection.Both;
+		tree.GrowVertical = Control.GrowDirection.Both;
+		tree.SetColumnTitle(0, "Player");
+		tree.SetColumnTitle(1, "Score");
+		var root = tree.CreateItem();
+		
+		foreach ((string, int) entry in playerScoreboard)
+		{
+			var item = tree.CreateItem(root);
+			item.SetText(0, entry.Item1);
+			item.SetText(1, entry.Item2.ToString());
+		}
+		
+		scoreboardWindow.AddChild(tree);
+		tree.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		
+		GetTree().Root.AddChild(scoreboardWindow);
 	}
 }

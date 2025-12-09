@@ -10,32 +10,17 @@ public partial class AdminControls : HBoxContainer
 	
 	public override void _Ready()
 	{
-		Connection.Instance.OnBecomeAdmin += OnBecomeAdmin;
-		Connection.Instance.OnTournamentEnd += _ => StartTournament.Show();
-		Connection.Instance.OnStartTournamentAck += () => StartTournament.Hide();
+		Connection.Instance.OnBecomeAdmin += UpdateUI;
+		Connection.Instance.OnTournamentEnd += UpdateUI;
+		Connection.Instance.OnStartTournamentAck += UpdateUI;
+		Connection.Instance.OnCancelTournamentAck += UpdateUI;
+		Connection.Instance.OnGetDataAcks += UpdateUI;
 		
 		StartTournament.Pressed += () => Connection.Instance.StartTournament();
 		CancelTournament.Pressed += () => Connection.Instance.CancelTournament();
-		if (!Connection.Instance.IsAdmin)
-		{
-			StartTournament.Hide();
-			CancelTournament.Hide();
-			Label.Hide();
-			Timeout.Hide();
-		} 
-		else if (Connection.Instance.ActiveTournament)
-		{
-			StartTournament.Hide();
-		}
-
-		Timeout.Value = Connection.Instance.CurrentWaitTimeout;
-		var time = Connection.Instance.CurrentWaitTimeout.ToString();
-		if (time.Length > 3)
-		{
-			time = time.Substring(0, 3);
-		}
 		
-		Label.Text = "Wait To Move: " + time + "s ";
+		UpdateUI();
+		
 		Timeout.ValueChanged += value =>
 		{
 			Connection.Instance.SetTournamentWait((float)value);
@@ -52,7 +37,54 @@ public partial class AdminControls : HBoxContainer
 	
 	public override void _ExitTree()
 	{
-		Connection.Instance.OnBecomeAdmin -= OnBecomeAdmin;
+		Connection.Instance.OnBecomeAdmin -= UpdateUI;
+		Connection.Instance.OnTournamentEnd -= UpdateUI;
+		Connection.Instance.OnStartTournamentAck -= UpdateUI;
+		Connection.Instance.OnCancelTournamentAck -= UpdateUI;
+		Connection.Instance.OnGetDataAcks -= UpdateUI;
+	}
+
+	private void UpdateUI()
+	{
+		if (!Connection.Instance.IsAdmin)
+		{
+			BecomeAdmin.Show();
+			StartTournament.Hide();
+			CancelTournament.Hide();
+			Label.Hide();
+			Timeout.Hide();
+		}
+		else
+		{
+			BecomeAdmin.Hide();
+			Label.Show();
+			Timeout.Show();
+		}
+
+		if (Connection.Instance.IsAdmin && Connection.Instance.DemoMode)
+		{
+			StartTournament.Hide();
+			CancelTournament.Hide();
+		}
+		else if (Connection.Instance.IsAdmin && Connection.Instance.ActiveTournament)
+		{
+			StartTournament.Hide();
+			CancelTournament.Show();
+		} 
+		else if (Connection.Instance.IsAdmin)
+		{
+			StartTournament.Show();
+			CancelTournament.Hide();
+		}
+
+		Timeout.Value = Connection.Instance.CurrentWaitTimeout;
+		var time = Connection.Instance.CurrentWaitTimeout.ToString();
+		if (time.Length > 3)
+		{
+			time = time.Substring(0, 3);
+		}
+		
+		Label.Text = "Wait To Move: " + time + "s ";
 	}
 
 	private void ShowAuthPopup()
@@ -66,7 +98,7 @@ public partial class AdminControls : HBoxContainer
 		authWindow.Size = new Vector2I(256, 128);
 		authWindow.CloseRequested += () =>
 		{
-			GetTree().Root.RemoveChild(authWindow);
+			GetTree().Root.CallDeferred(Node.MethodName.RemoveChild, authWindow);
 		};
 		
 		var vbox = new VBoxContainer();
@@ -81,12 +113,30 @@ public partial class AdminControls : HBoxContainer
 		passwordBox.PlaceholderText = "Password";
 		passwordBox.SetCustomMinimumSize(new Vector2(32, 32));
 		
+		passwordBox.GuiInput += e =>
+		{
+			if (passwordBox.HasFocus() && e is InputEventKey inputEventKey && inputEventKey.IsPressed())
+			{
+				if (inputEventKey.KeyLabel == Key.Enter)
+				{
+					Connection.Instance.AdminAuth(passwordBox.Text);
+					GetTree().Root.CallDeferred(Node.MethodName.RemoveChild, authWindow);
+					GetViewport().SetInputAsHandled();
+				}
+
+				if (inputEventKey.KeyLabel == Key.Space)
+				{
+					GetViewport().SetInputAsHandled();
+				}
+			}
+		};
+		
 		var button = new Button();
 		button.Text = "Login";
 		button.Pressed += () =>
 		{
 			Connection.Instance.AdminAuth(passwordBox.Text);
-			GetTree().Root.RemoveChild(authWindow);
+			GetTree().Root.CallDeferred(Node.MethodName.RemoveChild, authWindow);
 		};
 		
 		vbox.AddChild(passwordBox);
@@ -95,20 +145,5 @@ public partial class AdminControls : HBoxContainer
 		authWindow.AddChild(vbox);
 		
 		GetTree().Root.AddChild(authWindow);
-	}
-
-	private void OnBecomeAdmin()
-	{
-		BecomeAdmin.Hide();
-		if (!Connection.Instance.ActiveTournament)
-		{
-			StartTournament.Show();
-		}
-		else
-		{
-			CancelTournament.Show();
-		}
-		Label.Show();
-		Timeout.Show();
 	}
 }

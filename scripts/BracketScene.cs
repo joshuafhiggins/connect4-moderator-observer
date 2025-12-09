@@ -31,7 +31,6 @@ public partial class BracketScene : Control
 		Connection.Instance.OnUpdatedPlayers += UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches += UpdateMatches;
 		Connection.Instance.OnWatchGameAck += TransitionToBoard;
-		Connection.Instance.OnTournamentEnd += ShowTournamentScoreboard;
 	}
 
 	public override void _ExitTree()
@@ -39,13 +38,13 @@ public partial class BracketScene : Control
 		Connection.Instance.OnUpdatedPlayers -= UpdatePlayers;
 		Connection.Instance.OnUpdatedMatches -= UpdateMatches;
 		Connection.Instance.OnWatchGameAck -= TransitionToBoard;
-		Connection.Instance.OnTournamentEnd -= ShowTournamentScoreboard;
 	}
 
 	private void UpdatePlayers(List<PlayerData> playerList)
 	{
 		Players.Clear();
 		_playerList = playerList;
+		_playerList.Sort((a, b) => a.username.CompareTo(b.username));
 		var root = Players.CreateItem();
 		for (int i = 0; i < _playerList.Count; i++)
 		{
@@ -55,7 +54,7 @@ public partial class BracketScene : Control
 			item.SetText(2, playerList[i].isPlaying ? "Yes" : "No");
 			if (Connection.Instance.IsAdmin)
 			{
-				item.AddButton(0, TerminateKickButton, i, false, "Kick"); // TODO
+				item.AddButton(0, TerminateKickButton, i, false, "Kick");
 			}
 		}
 	}
@@ -71,19 +70,27 @@ public partial class BracketScene : Control
 			item.SetText(0, matchList[i].matchId.ToString());
 			item.SetText(1, matchList[i].player1);
 			item.SetText(2, matchList[i].player2);
-			item.AddButton(0, WatchButton, item.GetButtonCount(0), false, "Watch");
+			item.AddButton(0, WatchButton, i, false, "Watch");
 			if (Connection.Instance.IsAdmin)
 			{
-				item.AddButton(0, TerminateKickButton, item.GetButtonCount(0), false, "Terminate");
+				item.AddButton(0, TerminateKickButton, 128 + i, false, "Terminate");
 			}
 		}
 	}
 
 	private void WatchGame(TreeItem item, long column, long id, long mouseButtonIndex)
 	{
-		if (mouseButtonIndex == 1 && column == 0)
+		if (mouseButtonIndex == 1 && column == 0 && id < 128)
 		{
 			Connection.Instance.SendWatchGame(_matchList[(int) id].matchId);
+		} 
+	}
+	
+	private void TerminateGame(TreeItem item, long column, long id, long mouseButtonIndex)
+	{
+		if (mouseButtonIndex == 1 && column == 0 && id - 128 >= 0 && _matchList[(int) id - 128] != null)
+		{
+			Connection.Instance.TerminateGame(_matchList[(int) id - 128].matchId);
 		} 
 	}
 	
@@ -95,51 +102,8 @@ public partial class BracketScene : Control
 		} 
 	}
 
-	private void TerminateGame(TreeItem item, long column, long id, long mouseButtonIndex)
-	{
-		if (mouseButtonIndex == 1 && column == 0 && id - 1 > 0 && _matchList[(int) id - 1] != null)
-		{
-			Connection.Instance.TerminateGame(_matchList[(int) id - 1].matchId);
-		} 
-	}
-
 	private void TransitionToBoard()
 	{
 		GetTree().ChangeSceneToFile(BOARD_SCENE_PATH);
-	}
-	
-	private void ShowTournamentScoreboard(List<(string, int)> playerScoreboard)
-	{
-		var scoreboardWindow = new Window();
-		scoreboardWindow.Theme = GD.Load<Theme>("res://assets/theme.tres");
-		scoreboardWindow.AlwaysOnTop = true;
-		scoreboardWindow.MaximizeDisabled = true;
-		scoreboardWindow.Unresizable = true;
-		scoreboardWindow.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
-		scoreboardWindow.Size = new Vector2I(256, 512);
-		scoreboardWindow.CloseRequested += () =>
-		{
-			GetTree().Root.RemoveChild(scoreboardWindow);
-		};
-		
-		var tree = new Tree();
-		tree.HideRoot = true;
-		tree.Columns = 2;
-		tree.ColumnTitlesVisible = true;
-		tree.Theme = GD.Load<Theme>("res://assets/theme.tres");
-		tree.SetColumnTitle(0, "Player");
-		tree.SetColumnTitle(1, "Score");
-		var root = tree.CreateItem();
-		
-		foreach ((string, int) entry in playerScoreboard)
-		{
-			var item = tree.CreateItem(root);
-			item.SetText(0, entry.Item1);
-			item.SetText(1, entry.Item2.ToString());
-		}
-		
-		scoreboardWindow.AddChild(tree);
-		
-		GetTree().Root.AddChild(scoreboardWindow);
 	}
 }
