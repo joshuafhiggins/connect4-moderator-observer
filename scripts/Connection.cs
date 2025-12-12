@@ -58,6 +58,7 @@ public partial class Connection : Node
 	private bool _connected = false;
 	private List<(string, int)> _lastScoreboard = [];
 	private bool _shouldShowTournamentResults = false;
+	private float _refreshGamePlayerListTimer = 5.0f;
 
 	public override void _Ready()
 	{
@@ -83,11 +84,6 @@ public partial class Connection : Node
 		}
 	}
 
-	public override void _ExitTree()
-	{
-		StopGameListRefreshLoop();
-	}
-
 	public override void _Process(double delta)
 	{
 		_webSocket.Poll();
@@ -100,7 +96,18 @@ public partial class Connection : Node
 				_connected = true;
 				LastError = "";
 				OnWsConnectionSuccess?.Invoke();
-				StartGameListRefreshLoop();
+				UpdateGameList();
+				UpdatePlayerList();
+				_refreshGamePlayerListTimer = 5.0f;
+			} else if (_refreshGamePlayerListTimer <= 0.0f)
+			{
+				UpdateGameList();
+				UpdatePlayerList();
+				_refreshGamePlayerListTimer = 5.0f;
+			}
+			else
+			{
+				_refreshGamePlayerListTimer -= (float) delta;
 			}
 			
 			while (_webSocket.GetAvailablePacketCount() > 0)
@@ -144,7 +151,7 @@ public partial class Connection : Node
 				CurrentWaitTimeout = 5.0;
 				ActiveTournament = false;
 				DemoMode = false;
-				StopGameListRefreshLoop();
+				_refreshGamePlayerListTimer = 5.0f;
 				var code = _webSocket.GetCloseCode();
 				var reason = _webSocket.GetCloseReason();
 				LastError = "Unexpected Disconnect. Reason: " + reason +  ", Code: " + code;
@@ -188,45 +195,6 @@ public partial class Connection : Node
 	public void UpdateGameList()
 	{
 		SendCommand("GAME", "LIST");
-	}
-
-	private void StartGameListRefreshLoop()
-	{
-		if (_gameListThreadRunning)
-		{
-			return;
-		}
-
-		_gameListThreadRunning = true;
-		_gameListThread = new Thread(() =>
-		{
-			while (_gameListThreadRunning)
-			{
-				if (IsSocketOpen)
-				{
-					UpdateGameList();
-					UpdatePlayerList();
-				}
-
-				Thread.Sleep(TimeSpan.FromSeconds(5));
-			}
-		})
-		{
-			IsBackground = true
-		};
-		_gameListThread.Start();
-	}
-
-	private void StopGameListRefreshLoop()
-	{
-		if (!_gameListThreadRunning)
-		{
-			return;
-		}
-
-		_gameListThreadRunning = false;
-		_gameListThread?.Join();
-		_gameListThread = null;
 	}
 
 	public void UpdatePlayerList()
@@ -433,8 +401,8 @@ public partial class Connection : Node
 			}
 			case "START":
 			{
-				OnStartTournamentAck?.Invoke();
 				ActiveTournament = true;
+				OnStartTournamentAck?.Invoke();
 				break;
 			}
 			case "CANCEL":
