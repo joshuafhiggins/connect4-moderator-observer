@@ -12,9 +12,10 @@ public partial class AdminControls : HBoxContainer
 	{
 		Connection.Instance.OnBecomeAdmin += UpdateUI;
 		Connection.Instance.OnTournamentEnd += UpdateUI;
-		Connection.Instance.OnStartTournamentAck += UpdateUI;
+		Connection.Instance.OnStartTournament += UpdateUI;
 		Connection.Instance.OnCancelTournamentAck += UpdateUI;
 		Connection.Instance.OnGetDataAcks += UpdateUI;
+		Connection.Instance.OnSetDataAcks += UpdateUI;
 		
 		StartTournament.Pressed += () => Connection.Instance.StartTournament();
 		CancelTournament.Pressed += () => Connection.Instance.CancelTournament();
@@ -23,7 +24,7 @@ public partial class AdminControls : HBoxContainer
 		
 		Timeout.ValueChanged += value =>
 		{
-			Connection.Instance.SetTournamentWait((float)value);
+			Connection.Instance.SetMoveWait((float)value);
 			var time = Connection.Instance.CurrentWaitTimeout.ToString();
 			if (time.Length > 3)
 			{
@@ -32,16 +33,17 @@ public partial class AdminControls : HBoxContainer
 			Label.Text = "Wait To Move: " + time + "s ";
 		};
 		
-		BecomeAdmin.Pressed += ShowAuthPopup;
+		BecomeAdmin.Pressed += showAuthPopup;
 	}
 	
 	public override void _ExitTree()
 	{
 		Connection.Instance.OnBecomeAdmin -= UpdateUI;
 		Connection.Instance.OnTournamentEnd -= UpdateUI;
-		Connection.Instance.OnStartTournamentAck -= UpdateUI;
+		Connection.Instance.OnStartTournament -= UpdateUI;
 		Connection.Instance.OnCancelTournamentAck -= UpdateUI;
 		Connection.Instance.OnGetDataAcks -= UpdateUI;
+		Connection.Instance.OnSetDataAcks -= UpdateUI;
 	}
 
 	private void UpdateUI()
@@ -66,7 +68,7 @@ public partial class AdminControls : HBoxContainer
 			StartTournament.Hide();
 			CancelTournament.Hide();
 		}
-		else if (Connection.Instance.IsAdmin && Connection.Instance.ActiveTournament)
+		else if (Connection.Instance.IsAdmin && Connection.Instance.ActiveTournament != TournamentType.None)
 		{
 			StartTournament.Hide();
 			CancelTournament.Show();
@@ -87,7 +89,7 @@ public partial class AdminControls : HBoxContainer
 		Label.Text = "Wait To Move: " + time + "s ";
 	}
 
-	private void ShowAuthPopup()
+	private void showAuthPopup()
 	{
 		var authWindow = new Window();
 		authWindow.Theme = GD.Load<Theme>("res://assets/theme.tres");

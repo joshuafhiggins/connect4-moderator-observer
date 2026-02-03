@@ -1,264 +1,249 @@
 using Godot;
 using System.Linq;
 
-public partial class BoardScreen : Node2D
-{
-	[Export] private AudioStream endingSfx;
-	[Export] private Theme theme;
-	
-	private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
-	private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
-	private const string BRACKET_SCENE_PATH = "res://scenes/bracket_view.tscn";
-	private const int CHIP_SCALE = 3;
-	private const int CHIP_SIZE = 24;
-	private const int CHIP_PADDING = 2;
-	private const int CHIP_X_OFF = -(CHIP_SIZE + CHIP_PADDING) * 7 / 2 + (CHIP_SIZE + CHIP_PADDING) / 2;
-	private const int Y_OFF = 300;
-	private const int CARD_CENTER_X_DEFAULT = -536;
-	private const double MOVE_TIMEOUT_BEFORE_PLACE = 1.0f;
+public partial class BoardScreen : Node2D {
+  [Export] private AudioStream endingSfx;
+  [Export] private Theme theme;
 
-	private double currentTimeout = 0.0f;
+  private const string RED_CHIP_PATH = "res://scenes/red_chip.tscn";
+  private const string YELLOW_CHIP_PATH = "res://scenes/yellow_chip.tscn";
+  private const string BRACKET_SCENE_PATH = "res://scenes/bracket_view.tscn";
+  private const int CHIP_SCALE = 3;
+  private const int CHIP_SIZE = 24;
+  private const int CHIP_PADDING = 2;
+  private const int CHIP_X_OFF = -(CHIP_SIZE + CHIP_PADDING) * 7 / 2 + (CHIP_SIZE + CHIP_PADDING) / 2;
+  private const int Y_OFF = 300;
+  private const int CARD_CENTER_X_DEFAULT = -536;
+  private const double MOVE_TIMEOUT_BEFORE_PLACE = 1.0f;
 
-	private PackedScene redChip;
-	private PackedScene ylwChip;
+  private double currentTimeout = 0.0f;
 
-	private Node2D player1Card; 
-	private Node2D player2Card;
-	private MatchData matchData;
-	
-	private RigidBody2D[,] chips = new RigidBody2D[6, 7]; // 6 rows 7 cols | 0, 0 is top left
+  private PackedScene redChip;
+  private PackedScene ylwChip;
 
-	private bool _lastMove = false;
-	private float _lastMoveTimer = 2.5f;
-	private string _winner = "";
+  private Node2D player1Card;
+  private Node2D player2Card;
+  private MatchData matchData;
 
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready() {
-		// Node initialization
-		player1Card = GetNode<Node2D>("Player1Card");
-		player2Card = GetNode<Node2D>("Player2Card");
+  private RigidBody2D[,] chips = new RigidBody2D[6, 7]; // 6 rows 7 cols | 0, 0 is top left
 
-		player1Card.GetNode<Label>("Name").Resized += () => setPlayerCardScale((player1Card.GetNode<Label>("Name").GetRect().Size.X + 7) / 16, player1Card);
-		player2Card.GetNode<Label>("Name").Resized += () => setPlayerCardScale((player2Card.GetNode<Label>("Name").GetRect().Size.X + 7) / 16, player2Card);
+  private bool _lastMove = false;
+  private float _lastMoveTimer = 2.5f;
+  private string _winner = "";
 
-		redChip = GD.Load<PackedScene>(RED_CHIP_PATH);
-		ylwChip = GD.Load<PackedScene>(YELLOW_CHIP_PATH);
-		
-		matchData = Connection.Instance.CurrentObservingMatch;
-		player1Card.GetNode<Label>("Name").Text = matchData.player1;
-		player2Card.GetNode<Label>("Name").Text = matchData.player2;
+  // Called when the node enters the scene tree for the first time.
+  public override void _Ready() {
+    // Node initialization
+    player1Card = GetNode<Node2D>("Player1Card");
+    player2Card = GetNode<Node2D>("Player2Card");
 
-		if (Connection.Instance.PreviousMoves.Count == 0)
-		{
-			player1Card.GetNode<Label>("Status").Show();
-			player2Card.GetNode<Label>("Status").Hide();
-		}
-		else if (Connection.Instance.PreviousMoves.Last().Item1 == matchData.player1)
-		{
-			player1Card.GetNode<Label>("Status").Hide();
-			player2Card.GetNode<Label>("Status").Show();
-		}
-		else
-		{
-			player1Card.GetNode<Label>("Status").Show();
-			player2Card.GetNode<Label>("Status").Hide();
-		}
-		
-		Connection.Instance.OnObserveWin += OnObserveWin;
-		Connection.Instance.OnObserveDraw += OnObserveDraw;
-		Connection.Instance.OnObserveTerminated += OnObserveTerminated;
-		Connection.Instance.OnObserveMove += ObserveMove;
-	}
+    player1Card.GetNode<Label>("Name").Resized += () =>
+      setPlayerCardScale((player1Card.GetNode<Label>("Name").GetRect().Size.X + 7) / 16, player1Card);
+    player2Card.GetNode<Label>("Name").Resized += () =>
+      setPlayerCardScale((player2Card.GetNode<Label>("Name").GetRect().Size.X + 7) / 16, player2Card);
 
-	public override void _Process(double delta)
-	{
-		if (Connection.Instance.PreviousMoves.Count != 0 && currentTimeout <= 0.0f)
-		{
-			var move = Connection.Instance.PreviousMoves[0];
-			Connection.Instance.PreviousMoves.RemoveAt(0);
-			if (move.Item1 == matchData.player1)
-			{
-				spawnRed(move.Item2);
-			}
-			else
-			{
-				spawnYellow(move.Item2);
-			}
+    redChip = GD.Load<PackedScene>(RED_CHIP_PATH);
+    ylwChip = GD.Load<PackedScene>(YELLOW_CHIP_PATH);
 
-			currentTimeout = MOVE_TIMEOUT_BEFORE_PLACE;
-		} 
-		else if (currentTimeout >= 0.0f)
-		{
-			currentTimeout -= delta;
-		}
+    matchData = Connection.Instance.CurrentObservingMatch;
+    player1Card.GetNode<Label>("Name").Text = matchData.player1;
+    player2Card.GetNode<Label>("Name").Text = matchData.player2;
 
-		if (_lastMove)
-		{
-			_lastMoveTimer -= (float) delta;
-		}
+    if (Connection.Instance.PreviousMoves.Count == 0) {
+      player1Card.GetNode<Label>("Status").Show();
+      player2Card.GetNode<Label>("Status").Hide();
+    }
+    else if (Connection.Instance.PreviousMoves.Last().Item1 == matchData.player1) {
+      player1Card.GetNode<Label>("Status").Hide();
+      player2Card.GetNode<Label>("Status").Show();
+    }
+    else {
+      player1Card.GetNode<Label>("Status").Show();
+      player2Card.GetNode<Label>("Status").Hide();
+    }
 
-		if (_lastMoveTimer <= 0.0f)
-		{
-			if (_winner == "")
-			{
-				PopupMessage("Draw!");
-			}
-			else
-			{
-				PopupMessage(_winner + " wins!");
-			}
-		}
-	}
+    Connection.Instance.OnObserveWin += OnObserveWin;
+    Connection.Instance.OnObserveDraw += OnObserveDraw;
+    Connection.Instance.OnObserveTerminated += OnObserveTerminated;
+    Connection.Instance.OnObserveMove += OnObserveMove;
+  }
 
-	public override void _ExitTree()
-	{
-		Connection.Instance.OnObserveWin -= OnObserveWin;
-		Connection.Instance.OnObserveDraw -= OnObserveDraw;
-		Connection.Instance.OnObserveTerminated -= OnObserveTerminated;
-		Connection.Instance.OnObserveMove -= ObserveMove;
-	}
+  public override void _Process(double delta) {
+    if (Connection.Instance.PreviousMoves.Count != 0 && currentTimeout <= 0.0f) {
+      var move = Connection.Instance.PreviousMoves[0];
+      Connection.Instance.PreviousMoves.RemoveAt(0);
+      if (move.Item1 == matchData.player1) {
+        spawnRed(move.Item2);
+      }
+      else {
+        spawnYellow(move.Item2);
+      }
 
-	private void OnObserveWin(string winner)
-	{
-		_lastMove = true; 
-		_winner = winner;
-		player1Card.GetNode<Label>("Status").Hide();
-		player2Card.GetNode<Label>("Status").Hide();
-	}
+      currentTimeout = MOVE_TIMEOUT_BEFORE_PLACE;
+    }
+    else if (currentTimeout >= 0.0f) {
+      currentTimeout -= delta;
+    }
 
-	private void OnObserveDraw()
-	{
-		_lastMove = true;
-		player1Card.GetNode<Label>("Status").Hide();
-		player2Card.GetNode<Label>("Status").Hide();
-	}
+    if (_lastMove) {
+      _lastMoveTimer -= (float)delta;
+    }
 
-	private void OnObserveTerminated()
-	{
-		PopupMessage("Match Terminated");
-		player1Card.GetNode<Label>("Status").Hide();
-		player2Card.GetNode<Label>("Status").Hide();
-	}
-	
-	private void ObserveMove(string username, int column)
-	{
-		if (username == matchData.player1)
-		{
-			if (!_lastMove)
-				player2Card.GetNode<Label>("Status").Show();
-			player1Card.GetNode<Label>("Status").Hide();
-		}
-		else
-		{
-			if (!_lastMove)
-				player1Card.GetNode<Label>("Status").Show();
-			player2Card.GetNode<Label>("Status").Hide();
-		}
-		Connection.Instance.PreviousMoves.Add((username, column));
-	}
+    if (_lastMoveTimer <= 0.0f) {
+      if (_winner == "") {
+        showPopupMessage("Draw!");
+      }
+      else {
+        showPopupMessage(_winner + " wins!");
+      }
+    }
+  }
 
-	private void PopupMessage(string message)
-	{
-		var popup = new Popup();
-		popup.AlwaysOnTop = true;
-		popup.Size = new Vector2I(200, 100);
-		popup.Theme = GD.Load<Theme>("res://assets/theme.tres");
-		var text = new Label();
-		text.Text = message;
-		var sfx = new AudioStreamPlayer();
-		sfx.Stream = endingSfx;
-		sfx.VolumeDb = -2;
-		popup.AddChild(sfx);
-		popup.AddChild(text);
-		text.GrowHorizontal = Control.GrowDirection.Both;
-		text.GrowVertical = Control.GrowDirection.Both;
-		text.HorizontalAlignment = HorizontalAlignment.Center;
-		text.VerticalAlignment = VerticalAlignment.Center;
-		text.AnchorsPreset = (int) Control.LayoutPreset.FullRect;
-		popup.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
-		popup.PopupHide += () => popup.QueueFree();
-		GetTree().Root.AddChild(popup);
-		popup.PopupCentered();
-		sfx.Play();
-		popup.Show();
-		TransitionToBracket();
-	}
-	
-	private void TransitionToBracket()
-	{
-		GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
-	}
+  public override void _ExitTree() {
+    Connection.Instance.OnObserveWin -= OnObserveWin;
+    Connection.Instance.OnObserveDraw -= OnObserveDraw;
+    Connection.Instance.OnObserveTerminated -= OnObserveTerminated;
+    Connection.Instance.OnObserveMove -= OnObserveMove;
+  }
 
-	/*
-	 * Determines if the column can have a new chip placed
-	 * Will return -1 if invalid
-	 * or
-	 * Will return row of board in which chip can be placed
-	 */
-	public int canPlaceOnCol(int col) {
-		if(col < 0 || col > 6) // Col out of range
-			return -1;
+  private void OnObserveWin(string winner) {
+    _lastMove = true;
+    _winner = winner;
+    player1Card.GetNode<Label>("Status").Hide();
+    player2Card.GetNode<Label>("Status").Hide();
+  }
 
-		return getNextAvailRow(col);
-	}
+  private void OnObserveDraw() {
+    _lastMove = true;
+    player1Card.GetNode<Label>("Status").Hide();
+    player2Card.GetNode<Label>("Status").Hide();
+  }
 
-	public int getNextAvailRow(int col) {
-		for(int i = chips.GetLength(0) - 1; i >= 0; i--) { // Start at bottom
-			if(chips[i, col] == null)
-				return i;
-		}
+  private void OnObserveTerminated() {
+    showPopupMessage("Match Terminated");
+    player1Card.GetNode<Label>("Status").Hide();
+    player2Card.GetNode<Label>("Status").Hide();
+  }
 
-		return -1;
-	}
+  private void OnObserveMove(string username, int column) {
+    if (username == matchData.player1) {
+      if (!_lastMove)
+        player2Card.GetNode<Label>("Status").Show();
+      player1Card.GetNode<Label>("Status").Hide();
+    }
+    else {
+      if (!_lastMove)
+        player1Card.GetNode<Label>("Status").Show();
+      player2Card.GetNode<Label>("Status").Hide();
+    }
 
-	private void spawnRed(int col) {
-		int row = canPlaceOnCol(col);
-		if(row == -1) {
-			GD.Print("Invalid Placement!");
-			return;
-		}
+    Connection.Instance.PreviousMoves.Add((username, column));
+  }
 
-		RigidBody2D newNode = redChip.Instantiate<RigidBody2D>();
-		AddChild(newNode);
-		newNode.Position = new Vector2(CHIP_SCALE * (CHIP_X_OFF + (CHIP_SIZE + CHIP_PADDING) * col), -(CHIP_SIZE + CHIP_PADDING) * 7);
+  private void showPopupMessage(string message) {
+    var popup = new Popup();
+    popup.AlwaysOnTop = true;
+    popup.Size = new Vector2I(200, 100);
+    popup.Theme = GD.Load<Theme>("res://assets/theme.tres");
+    var text = new Label();
+    text.Text = message;
+    var sfx = new AudioStreamPlayer();
+    sfx.Stream = endingSfx;
+    sfx.VolumeDb = -2;
+    popup.AddChild(sfx);
+    popup.AddChild(text);
+    text.GrowHorizontal = Control.GrowDirection.Both;
+    text.GrowVertical = Control.GrowDirection.Both;
+    text.HorizontalAlignment = HorizontalAlignment.Center;
+    text.VerticalAlignment = VerticalAlignment.Center;
+    text.AnchorsPreset = (int)Control.LayoutPreset.FullRect;
+    popup.InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen;
+    popup.PopupHide += () => popup.QueueFree();
+    GetTree().Root.AddChild(popup);
+    popup.PopupCentered();
+    sfx.Play();
+    popup.Show();
+    transitionToBracket();
+  }
 
-		chips[row, col] = newNode;
-	}
+  private void transitionToBracket() {
+    GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
+  }
 
-	private void spawnYellow(int col) {
-		int row = canPlaceOnCol(col);
-		if(row == -1) {
-			GD.Print("Invalid Placement!");
-			return;
-		}
+  /*
+   * Determines if the column can have a new chip placed
+   * Will return -1 if invalid
+   * or
+   * Will return row of board in which chip can be placed
+   */
+  private int canPlaceOnCol(int col) {
+    if (col < 0 || col > 6) // Col out of range
+      return -1;
 
-		RigidBody2D newNode = ylwChip.Instantiate<RigidBody2D>();
-		AddChild(newNode);
-		newNode.Position = new Vector2(CHIP_SCALE * (CHIP_X_OFF + (CHIP_SIZE + CHIP_PADDING) * col), -(CHIP_SIZE + CHIP_PADDING) * 7); 
+    return getNextAvailRow(col);
+  }
 
-		chips[row, col] = newNode;
-	}
+  private int getNextAvailRow(int col) {
+    for (int i = chips.GetLength(0) - 1; i >= 0; i--) {
+      // Start at bottom
+      if (chips[i, col] == null)
+        return i;
+    }
 
-	private void setPlayerCardScale(float x, Node2D playerCard) {
-		Sprite2D cardCenter = playerCard.GetNode<Sprite2D>("Center");
-		Sprite2D cardRight = playerCard.GetNode<Sprite2D>("Right");
+    return -1;
+  }
 
-		float offX = 16 * x / 2;
-		cardCenter.Scale = new Vector2(x, 2);
-		cardCenter.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX, cardCenter.Position.Y);
+  private void spawnRed(int col) {
+    int row = canPlaceOnCol(col);
+    if (row == -1) {
+      GD.Print("Invalid Placement!");
+      return;
+    }
 
-		cardRight.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX * 2 + 8, cardRight.Position.Y); // 8 is a magic number (im too lazy) for the size of the card edge multipled by 2
-	}
+    RigidBody2D newNode = redChip.Instantiate<RigidBody2D>();
+    AddChild(newNode);
+    newNode.Position = new Vector2(CHIP_SCALE * (CHIP_X_OFF + (CHIP_SIZE + CHIP_PADDING) * col),
+      -(CHIP_SIZE + CHIP_PADDING) * 7);
+
+    chips[row, col] = newNode;
+  }
+
+  private void spawnYellow(int col) {
+    int row = canPlaceOnCol(col);
+    if (row == -1) {
+      GD.Print("Invalid Placement!");
+      return;
+    }
+
+    RigidBody2D newNode = ylwChip.Instantiate<RigidBody2D>();
+    AddChild(newNode);
+    newNode.Position = new Vector2(CHIP_SCALE * (CHIP_X_OFF + (CHIP_SIZE + CHIP_PADDING) * col),
+      -(CHIP_SIZE + CHIP_PADDING) * 7);
+
+    chips[row, col] = newNode;
+  }
+
+  private void setPlayerCardScale(float x, Node2D playerCard) {
+    Sprite2D cardCenter = playerCard.GetNode<Sprite2D>("Center");
+    Sprite2D cardRight = playerCard.GetNode<Sprite2D>("Right");
+
+    float offX = 16 * x / 2;
+    cardCenter.Scale = new Vector2(x, 2);
+    cardCenter.Position = new Vector2(CARD_CENTER_X_DEFAULT + offX, cardCenter.Position.Y);
+
+    cardRight.Position =
+      new Vector2(CARD_CENTER_X_DEFAULT + offX * 2 + 8,
+        cardRight.Position.Y); // 8 is a magic number (im too lazy) for the size of the card edge multipled by 2
+  }
 }
 
-enum Direction
-{
-	UP,
-	UP_RIGHT,
-	RIGHT,
-	DOWN_RIGHT,
-	DOWN,
-	DOWN_LEFT,
-	LEFT,
-	UP_LEFT
+enum Direction {
+  UP,
+  UP_RIGHT,
+  RIGHT,
+  DOWN_RIGHT,
+  DOWN,
+  DOWN_LEFT,
+  LEFT,
+  UP_LEFT
 }
