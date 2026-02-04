@@ -42,9 +42,6 @@ public partial class Connection : Node {
   public event Action OnGetDataAcks;
   public event Action OnSetDataAcks;
 
-  // Reservation system (admin-only server feature)
-  public event Action OnReservationAddAck;
-  public event Action OnReservationDeleteAck;
   public event Action<List<(string player1, string player2)>> OnUpdatedReservations;
 
   public event Action OnWsConnectionSuccess;
@@ -59,7 +56,6 @@ public partial class Connection : Node {
   public TournamentType ActiveTournament { get; private set; }
   public bool DemoMode { get; private set; }
 
-  // (player1, player2) tuples as reported by the server.
   public List<(string player1, string player2)> Reservations { get; private set; } = [];
 
   public List<(string, int)> PreviousMoves { get; private set; } = [];
@@ -108,10 +104,12 @@ public partial class Connection : Node {
         OnWsConnectionSuccess?.Invoke();
         UpdateGameList();
         UpdatePlayerList();
+        GetReservations();
         refreshGamePlayerListTimer = 5.0f;
       } else if (refreshGamePlayerListTimer <= 0.0f) {
         UpdateGameList();
         UpdatePlayerList();
+        GetReservations();
         refreshGamePlayerListTimer = 5.0f;
       } else {
         refreshGamePlayerListTimer -= (float)delta;
@@ -228,34 +226,19 @@ public partial class Connection : Node {
     sendCommand("SET", "MAX_TIMEOUT:" + maxTimeout);
   }
 
-  // Reservation commands (admin-only)
-  public void ReservationAdd(string player1Username, string player2Username) {
+  public void AddReservation(string player1Username, string player2Username) {
     if (!IsAdmin) return;
-    if (!isValidReservationUsername(player1Username) || !isValidReservationUsername(player2Username)) {
-      GD.PrintErr("Invalid username(s) for reservation.");
-      return;
-    }
-    sendCommand("RESERVATION", $"ADD:{player1Username.Trim()},{player2Username.Trim()}");
+    sendCommand("RESERVATION", $"ADD:{player1Username},{player2Username}");
   }
 
-  public void ReservationDelete(string player1Username, string player2Username) {
+  public void DeleteReservation(string player1Username, string player2Username) {
     if (!IsAdmin) return;
-    if (!isValidReservationUsername(player1Username) || !isValidReservationUsername(player2Username)) {
-      GD.PrintErr("Invalid username(s) for reservation.");
-      return;
-    }
-    sendCommand("RESERVATION", $"DELETE:{player1Username.Trim()},{player2Username.Trim()}");
+    sendCommand("RESERVATION", $"DELETE:{player1Username},{player2Username}");
   }
 
-  public void ReservationGet() {
+  public void GetReservations() {
     if (!IsAdmin) return;
     sendCommand("RESERVATION", "GET");
-  }
-
-  private static bool isValidReservationUsername(string username) {
-    if (string.IsNullOrWhiteSpace(username)) return false;
-    // Protocol delimiters used by the server.
-    return !username.Contains(":") && !username.Contains(",") && !username.Contains("|");
   }
 
   private void sendCommand(string header, string body = "") {
@@ -321,7 +304,7 @@ public partial class Connection : Node {
           IsAdmin = true;
           GetMoveWait();
           GetTournamentStatus();
-          ReservationGet();
+          GetReservations();
           OnBecomeAdmin?.Invoke();
         }
 
@@ -428,7 +411,6 @@ public partial class Connection : Node {
         var p1 = users[0];
         var p2 = users[1];
         Reservations.Add((p1, p2));
-        OnReservationAddAck?.Invoke();
         OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
         break;
       }
@@ -441,7 +423,6 @@ public partial class Connection : Node {
         var p1 = users[0];
         var p2 = users[1];
         Reservations.RemoveAll(r => r.player1 == p1 && r.player2 == p2);
-        OnReservationDeleteAck?.Invoke();
         OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
         break;
       }
