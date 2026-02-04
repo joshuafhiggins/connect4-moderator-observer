@@ -42,6 +42,11 @@ public partial class Connection : Node {
   public event Action OnGetDataAcks;
   public event Action OnSetDataAcks;
 
+  // Reservation system (admin-only server feature)
+  public event Action OnReservationAddAck;
+  public event Action OnReservationDeleteAck;
+  public event Action<List<(string player1, string player2)>> OnUpdatedReservations;
+
   public event Action OnWsConnectionSuccess;
   public event Action OnWsConnectionFailed;
   public event Action OnWsDisconnect;
@@ -53,6 +58,10 @@ public partial class Connection : Node {
   public bool IsPlayer { get; private set; }
   public TournamentType ActiveTournament { get; private set; }
   public bool DemoMode { get; private set; }
+
+  // (player1, player2) tuples as reported by the server.
+  public List<(string player1, string player2)> Reservations { get; private set; } = [];
+
   public List<(string, int)> PreviousMoves { get; private set; } = [];
   public double CurrentWaitTimeout { get; private set; } = 5.0;
   public double MaxTimeout { get; private set; } = 30.0;
@@ -219,6 +228,36 @@ public partial class Connection : Node {
     sendCommand("SET", "MAX_TIMEOUT:" + maxTimeout);
   }
 
+  // Reservation commands (admin-only)
+  public void ReservationAdd(string player1Username, string player2Username) {
+    if (!IsAdmin) return;
+    if (!isValidReservationUsername(player1Username) || !isValidReservationUsername(player2Username)) {
+      GD.PrintErr("Invalid username(s) for reservation.");
+      return;
+    }
+    sendCommand("RESERVATION", $"ADD:{player1Username.Trim()},{player2Username.Trim()}");
+  }
+
+  public void ReservationDelete(string player1Username, string player2Username) {
+    if (!IsAdmin) return;
+    if (!isValidReservationUsername(player1Username) || !isValidReservationUsername(player2Username)) {
+      GD.PrintErr("Invalid username(s) for reservation.");
+      return;
+    }
+    sendCommand("RESERVATION", $"DELETE:{player1Username.Trim()},{player2Username.Trim()}");
+  }
+
+  public void ReservationGet() {
+    if (!IsAdmin) return;
+    sendCommand("RESERVATION", "GET");
+  }
+
+  private static bool isValidReservationUsername(string username) {
+    if (string.IsNullOrWhiteSpace(username)) return false;
+    // Protocol delimiters used by the server.
+    return !username.Contains(":") && !username.Contains(",") && !username.Contains("|");
+  }
+
   private void sendCommand(string header, string body = "") {
     if (!IsSocketOpen) {
       GD.PrintErr($"Cannot send {header}, socket is not open.");
@@ -282,12 +321,16 @@ public partial class Connection : Node {
           IsAdmin = true;
           GetMoveWait();
           GetTournamentStatus();
+          ReservationGet();
           OnBecomeAdmin?.Invoke();
         }
 
         break;
       case "TOURNAMENT":
         handleTournamentMessage(body);
+        break;
+      case "RESERVATION":
+        handleReservationMessage(body);
         break;
       case "GET":
         string data = body.Split(":")[1];
@@ -364,6 +407,64 @@ public partial class Connection : Node {
         OnCancelTournamentAck?.Invoke();
         break;
       }
+    }
+  }
+
+  private void handleReservationMessage(string body) {
+    if (string.IsNullOrWhiteSpace(body)) {
+      return;
+    }
+
+    string[] segments = body.Split(':');
+    string command = segments[0].Trim().ToUpperInvariant();
+
+    switch (command) {
+      case "ADD": {
+        // ADD:<player1>,<player2>
+        if (segments.Length < 2) break;
+        string[] users = segments[1].Split(',');
+        if (users.Length != 2) break;
+
+        var p1 = users[0];
+        var p2 = users[1];
+        Reservations.Add((p1, p2));
+        OnReservationAddAck?.Invoke();
+        OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
+        break;
+      }
+      case "DELETE": {
+        // DELETE:<player1>,<player2>
+        if (segments.Length < 2) break;
+        string[] users = segments[1].Split(',');
+        if (users.Length != 2) break;
+
+        var p1 = users[0];
+        var p2 = users[1];
+        Reservations.RemoveAll(r => r.player1 == p1 && r.player2 == p2);
+        OnReservationDeleteAck?.Invoke();
+        OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
+        break;
+      }
+      case "LIST": {
+        // LIST:<player1>,<player2>|<player1>,<player2>|...
+        var reservations = new List<(string player1, string player2)>();
+
+        if (segments.Length >= 2 && !string.IsNullOrWhiteSpace(segments[1])) {
+          string[] entries = segments[1].Split('|');
+          foreach (string entry in entries) {
+            string[] users = entry.Split(',');
+            if (users.Length != 2) continue;
+            reservations.Add((users[0], users[1]));
+          }
+        }
+
+        Reservations = reservations;
+        OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
+        break;
+      }
+      default:
+        GD.PrintErr($"Unhandled RESERVATION message: {body}");
+        break;
     }
   }
 
