@@ -403,7 +403,6 @@ public partial class Connection : Node {
 
     switch (command) {
       case "ADD": {
-        // ADD:<player1>,<player2>
         if (segments.Length < 2) break;
         string[] users = segments[1].Split(',');
         if (users.Length != 2) break;
@@ -415,7 +414,6 @@ public partial class Connection : Node {
         break;
       }
       case "DELETE": {
-        // DELETE:<player1>,<player2>
         if (segments.Length < 2) break;
         string[] users = segments[1].Split(',');
         if (users.Length != 2) break;
@@ -427,7 +425,6 @@ public partial class Connection : Node {
         break;
       }
       case "LIST": {
-        // LIST:<player1>,<player2>|<player1>,<player2>|...
         var reservations = new List<(string player1, string player2)>();
 
         if (segments.Length >= 2 && !string.IsNullOrWhiteSpace(segments[1])) {
