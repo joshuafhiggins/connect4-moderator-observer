@@ -100,13 +100,11 @@ public partial class Connection : Node {
         UpdateGameList();
         UpdatePlayerList();
         refreshGamePlayerListTimer = 5.0f;
-      }
-      else if (refreshGamePlayerListTimer <= 0.0f) {
+      } else if (refreshGamePlayerListTimer <= 0.0f) {
         UpdateGameList();
         UpdatePlayerList();
         refreshGamePlayerListTimer = 5.0f;
-      }
-      else {
+      } else {
         refreshGamePlayerListTimer -= (float)delta;
       }
 
@@ -124,19 +122,15 @@ public partial class Connection : Node {
           }
         }
       }
-    }
-    else if (state == WebSocketPeer.State.Connecting) {
+    } else if (state == WebSocketPeer.State.Connecting) {
       // Do nothing
-    }
-    else if (state == WebSocketPeer.State.Closing) {
+    } else if (state == WebSocketPeer.State.Closing) {
       // Do nothing
-    }
-    else if (state == WebSocketPeer.State.Closed) {
+    } else if (state == WebSocketPeer.State.Closed) {
       if (isConnecting) {
         isConnecting = false;
         OnWsConnectionFailed?.Invoke();
-      }
-      else if (isConnected) {
+      } else if (isConnected) {
         isConnected = false;
         IsAdmin = false;
         CurrentWaitTimeout = 5.0;
@@ -169,52 +163,22 @@ public partial class Connection : Node {
     sendCommand("CONNECT", clientId);
   }
 
-  public void SendDisconnect() {
-    sendCommand("DISCONNECT");
-  }
-
-  public void SendReady() {
-    sendCommand("READY");
-  }
-
-  public void SendPlay(int column) {
-    sendCommand("PLAY", column.ToString());
-  }
+  public void SendDisconnect() { sendCommand("DISCONNECT"); }
+  public void SendReady() { sendCommand("READY"); }
+  public void SendPlay(int column) { sendCommand("PLAY", column.ToString()); }
 
   // Observer commands
-  public void UpdateGameList() {
-    sendCommand("GAME", "LIST");
-  }
-
-  public void UpdatePlayerList() {
-    sendCommand("PLAYER", "LIST");
-  }
-
-  public void SendWatchGame(int matchID) {
-    sendCommand("GAME", "WATCH:" + matchID);
-  }
-
+  public void UpdateGameList() { sendCommand("GAME", "LIST"); }
+  public void UpdatePlayerList() { sendCommand("PLAYER", "LIST"); }
+  public void SendWatchGame(int matchID) { sendCommand("GAME", "WATCH:" + matchID); }
   public void AdminAuth(string password) {
     if (IsAdmin) return;
     sendCommand("ADMIN", "AUTH:" + password);
   }
-
-  public void GetMoveWait() {
-    sendCommand("GET", "MOVE_WAIT");
-  }
-
-  public void GetTournamentStatus() {
-    sendCommand("GET", "TOURNAMENT_STATUS");
-  }
-
-  public void GetDemoMode() {
-    sendCommand("GET", "DEMO_MODE");
-  }
-
-  public void GetMaxTimeout() {
-    sendCommand("GET", "MAX_TIMEOUT");
-  }
-
+  public void GetMoveWait() { sendCommand("GET", "MOVE_WAIT"); }
+  public void GetTournamentStatus() { sendCommand("GET", "TOURNAMENT_STATUS"); }
+  public void GetDemoMode() { sendCommand("GET", "DEMO_MODE"); }
+  public void GetMaxTimeout() { sendCommand("GET", "MAX_TIMEOUT"); }
 
   // Admin commands
   public void KickPlayer(string playerId) {
@@ -278,8 +242,7 @@ public partial class Connection : Node {
     if (separatorIndex >= 0) {
       header = message.Substring(0, separatorIndex).Trim();
       body = message.Substring(separatorIndex + 1).Trim();
-    }
-    else {
+    } else {
       header = message.Trim();
       body = string.Empty;
     }
@@ -309,8 +272,7 @@ public partial class Connection : Node {
       case "OPPONENT":
         if (int.TryParse(body, out int column)) {
           OnOpponentMove?.Invoke(column);
-        }
-        else {
+        } else {
           GD.PrintErr($"Invalid opponent column: {body}");
         }
 
@@ -331,24 +293,19 @@ public partial class Connection : Node {
         string data = body.Split(":")[1];
         if (body.StartsWith("MOVE_WAIT")) {
           CurrentWaitTimeout = double.Parse(data);
-        }
-        else if (body.StartsWith("MAX_TIMEOUT")) {
+        } else if (body.StartsWith("MAX_TIMEOUT")) {
           MaxTimeout = double.Parse(data);
-        }
-        else if (body.StartsWith("DEMO_MODE")) {
+        } else if (body.StartsWith("DEMO_MODE")) {
           DemoMode = bool.Parse(data);
-        }
-        else if (body.StartsWith("TOURNAMENT_STATUS")) {
+        } else if (body.StartsWith("TOURNAMENT_STATUS")) {
           TournamentType? type = parseTournamentType(data);
 
           if (type == null) {
             GD.PrintErr($"Unhandled tournament type: {data}");
-          }
-          else {
+          } else {
             ActiveTournament = type.Value;
           }
-        }
-        else {
+        } else {
           GD.PrintErr($"Unhandled data get: {body}");
         }
 
@@ -395,8 +352,7 @@ public partial class Connection : Node {
         TournamentType? type = parseTournamentType(argument);
         if (type == null) {
           GD.PrintErr($"Unhandled tournament type: {argument}");
-        }
-        else {
+        } else {
           ActiveTournament = type.Value;
           OnStartTournament?.Invoke();
         }
@@ -471,8 +427,7 @@ public partial class Connection : Node {
           GD.Print($"Unhandled GAME message: {body}");
           break;
       }
-    }
-    else // Regular observer/admin
+    } else // Regular observer/admin
     {
       switch (command) {
         case "WIN":
@@ -510,8 +465,7 @@ public partial class Connection : Node {
           if (activeMatchData.IsEmpty()) {
             string[] matchData = segments[2].Split(',');
             CurrentObservingMatch = new MatchData(int.Parse(matchData[0]), matchData[1], matchData[2]);
-          }
-          else {
+          } else {
             string[] matchData = activeMatchData[0].Split(',');
             CurrentObservingMatch = new MatchData(int.Parse(matchData[0]), matchData[1], matchData[2]);
             for (int i = 1; i < activeMatchData.Length; i++) {

@@ -17,7 +17,8 @@ public partial class ConnectButtonUI : Button {
       ErrorLabel.Text = Connection.Instance.LastError;
     }
 
-    AddressField.GuiInput += e => {
+    AddressField.GuiInput += e =>
+    {
       if (AddressField.HasFocus() && e is InputEventKey inputEventKey && inputEventKey.IsPressed()) {
         if (inputEventKey.KeyLabel == Key.Enter) {
           Connection.Instance.Connect(AddressField.Text);
@@ -36,13 +37,9 @@ public partial class ConnectButtonUI : Button {
     Connection.Instance.OnWsConnectionFailed -= OnConnectionFailed;
   }
 
-  public override void _Pressed() {
-    Connection.Instance.Connect(AddressField.Text);
-  }
+  public override void _Pressed() { Connection.Instance.Connect(AddressField.Text); }
 
-  private void OnConnectionSuccess() {
-    GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
-  }
+  private void OnConnectionSuccess() { GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH); }
 
   private void OnConnectionFailed() {
     ErrorLabel.Text = "Couldn't connect to server! " + Connection.Instance.LastError;

@@ -52,12 +52,10 @@ public partial class BoardScreen : Node2D {
     if (Connection.Instance.PreviousMoves.Count == 0) {
       player1Card.GetNode<Label>("Status").Show();
       player2Card.GetNode<Label>("Status").Hide();
-    }
-    else if (Connection.Instance.PreviousMoves.Last().Item1 == matchData.player1) {
+    } else if (Connection.Instance.PreviousMoves.Last().Item1 == matchData.player1) {
       player1Card.GetNode<Label>("Status").Hide();
       player2Card.GetNode<Label>("Status").Show();
-    }
-    else {
+    } else {
       player1Card.GetNode<Label>("Status").Show();
       player2Card.GetNode<Label>("Status").Hide();
     }
@@ -74,14 +72,12 @@ public partial class BoardScreen : Node2D {
       Connection.Instance.PreviousMoves.RemoveAt(0);
       if (move.Item1 == matchData.player1) {
         spawnRed(move.Item2);
-      }
-      else {
+      } else {
         spawnYellow(move.Item2);
       }
 
       currentTimeout = MOVE_TIMEOUT_BEFORE_PLACE;
-    }
-    else if (currentTimeout >= 0.0f) {
+    } else if (currentTimeout >= 0.0f) {
       currentTimeout -= delta;
     }
 
@@ -92,8 +88,7 @@ public partial class BoardScreen : Node2D {
     if (_lastMoveTimer <= 0.0f) {
       if (_winner == "") {
         showPopupMessage("Draw!");
-      }
-      else {
+      } else {
         showPopupMessage(_winner + " wins!");
       }
     }
@@ -130,8 +125,7 @@ public partial class BoardScreen : Node2D {
       if (!_lastMove)
         player2Card.GetNode<Label>("Status").Show();
       player1Card.GetNode<Label>("Status").Hide();
-    }
-    else {
+    } else {
       if (!_lastMove)
         player1Card.GetNode<Label>("Status").Show();
       player2Card.GetNode<Label>("Status").Hide();
@@ -166,9 +160,7 @@ public partial class BoardScreen : Node2D {
     transitionToBracket();
   }
 
-  private void transitionToBracket() {
-    GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH);
-  }
+  private void transitionToBracket() { GetTree().ChangeSceneToFile(BRACKET_SCENE_PATH); }
 
   /*
    * Determines if the column can have a new chip placed

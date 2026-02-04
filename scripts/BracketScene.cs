@@ -40,13 +40,13 @@ public partial class BracketScene : Control {
   private void updatePlayers(List<PlayerData> newPlayerList) {
     Players.Clear();
     playerList = newPlayerList;
-    playerList.Sort((a, b) => a.username.CompareTo(b.username));
+    playerList.Sort((a, b) => a.Username.CompareTo(b.Username));
     var root = Players.CreateItem();
     for (int i = 0; i < playerList.Count; i++) {
       var item = Players.CreateItem(root);
-      item.SetText(0, newPlayerList[i].username);
-      item.SetText(1, newPlayerList[i].isReady ? "Yes" : "No");
-      item.SetText(2, newPlayerList[i].isPlaying ? "Yes" : "No");
+      item.SetText(0, newPlayerList[i].Username);
+      item.SetText(1, newPlayerList[i].IsReady ? "Yes" : "No");
+      item.SetText(2, newPlayerList[i].IsPlaying ? "Yes" : "No");
       if (Connection.Instance.IsAdmin) {
         item.AddButton(0, TerminateKickButton, i, false, "Kick");
       }
@@ -83,11 +83,9 @@ public partial class BracketScene : Control {
 
   private void kickPlayer(TreeItem item, long column, long id, long mouseButtonIndex) {
     if (mouseButtonIndex == 1 && column == 0) {
-      Connection.Instance.KickPlayer(playerList[(int)id].username);
+      Connection.Instance.KickPlayer(playerList[(int)id].Username);
     }
   }
 
-  private void transitionToBoard() {
-    GetTree().ChangeSceneToFile(BOARD_SCENE_PATH);
-  }
+  private void transitionToBoard() { GetTree().ChangeSceneToFile(BOARD_SCENE_PATH); }
 }
