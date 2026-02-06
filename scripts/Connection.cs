@@ -42,6 +42,8 @@ public partial class Connection : Node {
   public event Action OnGetDataAcks;
   public event Action OnSetDataAcks;
 
+  public event Action<List<(string player1, string player2)>> OnUpdatedReservations;
+
   public event Action OnWsConnectionSuccess;
   public event Action OnWsConnectionFailed;
   public event Action OnWsDisconnect;
@@ -53,6 +55,9 @@ public partial class Connection : Node {
   public bool IsPlayer { get; private set; }
   public TournamentType ActiveTournament { get; private set; }
   public bool DemoMode { get; private set; }
+
+  public List<(string player1, string player2)> Reservations { get; private set; } = [];
+
   public List<(string, int)> PreviousMoves { get; private set; } = [];
   public double CurrentWaitTimeout { get; private set; } = 5.0;
   public double MaxTimeout { get; private set; } = 30.0;
@@ -99,10 +104,12 @@ public partial class Connection : Node {
         OnWsConnectionSuccess?.Invoke();
         UpdateGameList();
         UpdatePlayerList();
+        GetReservations();
         refreshGamePlayerListTimer = 5.0f;
       } else if (refreshGamePlayerListTimer <= 0.0f) {
         UpdateGameList();
         UpdatePlayerList();
+        GetReservations();
         refreshGamePlayerListTimer = 5.0f;
       } else {
         refreshGamePlayerListTimer -= (float)delta;
@@ -219,6 +226,21 @@ public partial class Connection : Node {
     sendCommand("SET", "MAX_TIMEOUT:" + maxTimeout);
   }
 
+  public void AddReservation(string player1Username, string player2Username) {
+    if (!IsAdmin) return;
+    sendCommand("RESERVATION", $"ADD:{player1Username},{player2Username}");
+  }
+
+  public void DeleteReservation(string player1Username, string player2Username) {
+    if (!IsAdmin) return;
+    sendCommand("RESERVATION", $"DELETE:{player1Username},{player2Username}");
+  }
+
+  public void GetReservations() {
+    if (!IsAdmin) return;
+    sendCommand("RESERVATION", "GET");
+  }
+
   private void sendCommand(string header, string body = "") {
     if (!IsSocketOpen) {
       GD.PrintErr($"Cannot send {header}, socket is not open.");
@@ -282,12 +304,16 @@ public partial class Connection : Node {
           IsAdmin = true;
           GetMoveWait();
           GetTournamentStatus();
+          GetReservations();
           OnBecomeAdmin?.Invoke();
         }
 
         break;
       case "TOURNAMENT":
         handleTournamentMessage(body);
+        break;
+      case "RESERVATION":
+        handleReservationMessage(body);
         break;
       case "GET":
         string data = body.Split(":")[1];
@@ -364,6 +390,59 @@ public partial class Connection : Node {
         OnCancelTournamentAck?.Invoke();
         break;
       }
+    }
+  }
+
+  private void handleReservationMessage(string body) {
+    if (string.IsNullOrWhiteSpace(body)) {
+      return;
+    }
+
+    string[] segments = body.Split(':');
+    string command = segments[0].Trim().ToUpperInvariant();
+
+    switch (command) {
+      case "ADD": {
+        if (segments.Length < 2) break;
+        string[] users = segments[1].Split(',');
+        if (users.Length != 2) break;
+
+        var p1 = users[0];
+        var p2 = users[1];
+        Reservations.Add((p1, p2));
+        OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
+        break;
+      }
+      case "DELETE": {
+        if (segments.Length < 2) break;
+        string[] users = segments[1].Split(',');
+        if (users.Length != 2) break;
+
+        var p1 = users[0];
+        var p2 = users[1];
+        Reservations.RemoveAll(r => r.player1 == p1 && r.player2 == p2);
+        OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
+        break;
+      }
+      case "LIST": {
+        var reservations = new List<(string player1, string player2)>();
+
+        if (segments.Length >= 2 && !string.IsNullOrWhiteSpace(segments[1])) {
+          string[] entries = segments[1].Split('|');
+          foreach (string entry in entries) {
+            string[] users = entry.Split(',');
+            if (users.Length != 2) continue;
+            reservations.Add((users[0], users[1]));
+          }
+        }
+
+        Reservations = reservations;
+        OnUpdatedReservations?.Invoke(new List<(string player1, string player2)>(Reservations));
+        break;
+      }
+      default:
+        GD.PrintErr($"Unhandled RESERVATION message: {body}");
+        break;
     }
   }
 
