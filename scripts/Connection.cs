@@ -208,6 +208,12 @@ public partial class Connection : Node {
     sendCommand("GAME", "TERMINATE:" + matchID);
   }
 
+  public void AwardGame(int matchID, string winnerUsername) {
+    if (!IsAdmin) return;
+    if (string.IsNullOrWhiteSpace(winnerUsername)) return;
+    sendCommand("GAME", "AWARD:" + matchID + ":" + winnerUsername.Trim());
+  }
+
   public void SetMoveWait(float waitTime) {
     if (!IsAdmin) return;
     CurrentWaitTimeout = waitTime;
