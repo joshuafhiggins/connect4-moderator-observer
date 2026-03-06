@@ -208,7 +208,7 @@ public partial class Connection : Node {
     sendCommand("GAME", "TERMINATE:" + matchID);
   }
 
-  public void AwardGame(int matchID, string winnerUsername) {
+  public void AwardGameWinner(int matchID, string winnerUsername) {
     if (!IsAdmin) return;
     if (string.IsNullOrWhiteSpace(winnerUsername)) return;
     sendCommand("GAME", "AWARD:" + matchID + ":" + winnerUsername.Trim());
