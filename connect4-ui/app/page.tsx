@@ -1,84 +1,85 @@
-import Link from "next/link";
+"use client";
 
-const cards = [
-  {
-    href: "/spectate",
-    icon: "👁",
-    title: "Spectate Matches",
-    desc: "Watch live Connect4 games in real time. See every move as it happens on an interactive board.",
-    color: "border-blue-600 hover:border-blue-400",
-    badge: "Observer",
-  },
-  {
-    href: "/tournament",
-    icon: "🏆",
-    title: "Tournament View",
-    desc: "Track tournament standings, scores, and active rounds. Stay updated with live leaderboards.",
-    color: "border-purple-600 hover:border-purple-400",
-    badge: "Live Stats",
-  },
-  {
-    href: "/play",
-    icon: "🎮",
-    title: "Play as Human",
-    desc: "Join the server as a player. Connect with a username, ready up, and play Connect4 live.",
-    color: "border-green-600 hover:border-green-400",
-    badge: "Interactive",
-  },
-];
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { DEFAULT_WS_URL } from "@/lib/protocol";
+import { useConnection } from "@/lib/connection";
 
 export default function Home() {
-  return (
-    <div className="flex flex-col items-center gap-10 py-12">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-white mb-3">
-          Connect4 Moderator
-        </h1>
-        <p className="text-gray-400 text-lg max-w-xl">
-          Student AI tournament platform — watch games, track standings, or play
-          yourself.
-        </p>
-      </div>
+	const router = useRouter();
+	const {
+		connect,
+		role,
+		status,
+		wsUrl: connectedWsUrl,
+		shouldRedirectToConnect,
+		clearRedirectFlag,
+	} = useConnection();
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-        {cards.map(({ href, icon, title, desc, color, badge }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`bg-gray-900 border-2 ${color} rounded-xl p-6 flex flex-col gap-3 transition-all hover:bg-gray-800 hover:shadow-xl group`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-4xl">{icon}</span>
-              <span className="text-xs font-mono bg-gray-800 text-gray-400 px-2 py-1 rounded-full group-hover:bg-gray-700">
-                {badge}
-              </span>
-            </div>
-            <h2 className="text-xl font-semibold text-white">{title}</h2>
-            <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
-          </Link>
-        ))}
-      </div>
+	const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL);
 
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          WebSocket Protocol Reference
-        </h3>
-        <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-          {[
-            ["CONNECT:<name>", "Register as player"],
-            ["READY", "Signal ready to play"],
-            ["PLAY:<col>", "Drop piece in column 0–6"],
-            ["GAME:LIST", "List active matches"],
-            ["GAME:WATCH:<id>", "Watch a specific match"],
-            ["PLAYER:LIST", "List connected players"],
-          ].map(([cmd, desc]) => (
-            <div key={cmd} className="flex gap-2">
-              <span className="text-blue-400">{cmd}</span>
-              <span className="text-gray-500">→ {desc}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+	useEffect(() => {
+		if (shouldRedirectToConnect) {
+			clearRedirectFlag();
+		}
+	}, [shouldRedirectToConnect, clearRedirectFlag]);
+
+	const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+
+		connect({ role: "observer", wsUrl });
+		router.push("/spectate");
+	};
+
+	return (
+		<div className="max-w-3xl mx-auto py-10">
+			<div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+				<div>
+					<h1 className="text-3xl font-bold text-white">
+						Connect to Moderator Server
+					</h1>
+					<p className="text-sm text-gray-400 mt-2">
+						Connect as an observer to watch live matches and tournaments.
+					</p>
+				</div>
+
+				{shouldRedirectToConnect && (
+					<div className="rounded-lg border border-red-700 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+						Connection lost. Please reconnect to continue.
+					</div>
+				)}
+
+				{status === "connected" && role && (
+					<div className="rounded-lg border border-green-700 bg-green-950/30 px-4 py-3 text-sm text-green-200">
+						Connected to {connectedWsUrl} as observer.
+					</div>
+				)}
+
+				<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+					<div>
+						<label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">
+							Server URL
+						</label>
+						<input
+							className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+							value={wsUrl}
+							onChange={(e) => setWsUrl(e.target.value)}
+							placeholder="wss://..."
+						/>
+					</div>
+
+					<div className="flex flex-wrap gap-2 pt-2">
+						<button
+							type="submit"
+							className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+						>
+							{status === "connecting" || status === "reconnecting"
+								? "Connecting..."
+								: "Connect to Server"}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
 }

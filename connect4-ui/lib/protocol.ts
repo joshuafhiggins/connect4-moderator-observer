@@ -1,218 +1,239 @@
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface GameEntry {
-  id: number;
-  player1: string;
-  player2: string;
+	id: number;
+	player1: string;
+	player2: string;
 }
 
 export interface PlayerEntry {
-  username: string;
-  ready: boolean;
-  inMatch: boolean;
+	username: string;
+	ready: boolean;
+	inMatch: boolean;
 }
 
 export interface ScoreEntry {
-  player: string;
-  score: number;
+	player: string;
+	score: number;
 }
 
 export interface MoveEntry {
-  username: string;
-  column: number;
+	username: string;
+	column: number;
 }
+
+export const DEFAULT_WS_URL = process.env.NODE_ENV === "development"
+	? "ws://localhost:8080"
+	: "wss://connect4.abunchofknowitalls.com";
+export const RECONNECT_INTERVAL_MS = 5000;
+export const RECONNECT_TIMEOUT_MS = 60000;
 
 // ─── Parsed message union ────────────────────────────────────────────────────
 
 export type ParsedMessage =
-  | { type: "CONNECT_ACK" }
-  | { type: "RECONNECT_ACK" }
-  | { type: "DISCONNECT_ACK" }
-  | { type: "READY_ACK" }
-  | { type: "GAME_START"; goesFirst: boolean }
-  | { type: "GAME_WINS" }
-  | { type: "GAME_LOSS" }
-  | { type: "GAME_DRAW" }
-  | { type: "GAME_TERMINATED" }
-  | { type: "OPPONENT_MOVE"; column: number }
-  | { type: "GAME_LIST"; games: GameEntry[] }
-  | {
-      type: "GAME_WATCH_ACK";
-      matchId: number;
-      player1: string;
-      player2: string;
-      moves: MoveEntry[];
-    }
-  | { type: "GAME_MOVE"; username: string; column: number }
-  | { type: "GAME_WIN"; winner: string }
-  | { type: "PLAYER_LIST"; players: PlayerEntry[] }
-  | { type: "TOURNAMENT_START"; tournamentType: string }
-  | { type: "TOURNAMENT_CANCEL" }
-  | { type: "TOURNAMENT_SCORES"; scores: ScoreEntry[] }
-  | { type: "TOURNAMENT_END" }
-  | { type: "ADMIN_AUTH_ACK" }
-  | { type: "GET_DATA"; key: string; value: string }
-  | { type: "SET_DATA_ACK"; key: string }
-  | { type: "ERROR"; message: string }
-  | { type: "UNKNOWN"; raw: string };
+	| { type: "CONNECT_ACK" }
+	| { type: "RECONNECT_ACK" }
+	| { type: "DISCONNECT_ACK" }
+	| { type: "READY_ACK" }
+	| { type: "GAME_START"; goesFirst: boolean }
+	| { type: "GAME_WINS" }
+	| { type: "GAME_LOSS" }
+	| { type: "GAME_DRAW" }
+	| { type: "GAME_TERMINATED" }
+	| { type: "OPPONENT_MOVE"; column: number }
+	| { type: "GAME_LIST"; games: GameEntry[] }
+	| {
+			type: "GAME_WATCH_ACK";
+			matchId: number;
+			player1: string;
+			player2: string;
+			moves: MoveEntry[];
+	  }
+	| { type: "GAME_MOVE"; username: string; column: number }
+	| { type: "GAME_WIN"; winner: string }
+	| { type: "PLAYER_LIST"; players: PlayerEntry[] }
+	| { type: "TOURNAMENT_START"; tournamentType: string }
+	| { type: "TOURNAMENT_CANCEL" }
+	| { type: "TOURNAMENT_SCORES"; scores: ScoreEntry[] }
+	| { type: "TOURNAMENT_END" }
+	| { type: "ADMIN_AUTH_ACK" }
+	| { type: "GET_DATA"; key: string; value: string }
+	| { type: "SET_DATA_ACK"; key: string }
+	| { type: "ERROR"; message: string }
+	| { type: "UNKNOWN"; raw: string };
 
 // ─── Parser ──────────────────────────────────────────────────────────────────
 
 export function parseMessage(raw: string): ParsedMessage {
-  const parts = raw.split(":");
+	const parts = raw.split(":");
 
-  switch (parts[0]) {
-    case "CONNECT":
-      if (parts[1] === "ACK") return { type: "CONNECT_ACK" };
-      break;
-    case "RECONNECT":
-      if (parts[1] === "ACK") return { type: "RECONNECT_ACK" };
-      break;
-    case "DISCONNECT":
-      if (parts[1] === "ACK") return { type: "DISCONNECT_ACK" };
-      break;
-    case "READY":
-      if (parts[1] === "ACK") return { type: "READY_ACK" };
-      break;
+	switch (parts[0]) {
+		case "CONNECT":
+			if (parts[1] === "ACK") return { type: "CONNECT_ACK" };
+			break;
+		case "RECONNECT":
+			if (parts[1] === "ACK") return { type: "RECONNECT_ACK" };
+			break;
+		case "DISCONNECT":
+			if (parts[1] === "ACK") return { type: "DISCONNECT_ACK" };
+			break;
+		case "READY":
+			if (parts[1] === "ACK") return { type: "READY_ACK" };
+			break;
 
-    case "GAME": {
-      switch (parts[1]) {
-        case "START":
-          return { type: "GAME_START", goesFirst: parts[2] === "1" };
-        case "WINS":
-          return { type: "GAME_WINS" };
-        case "LOSS":
-          return { type: "GAME_LOSS" };
-        case "DRAW":
-          return { type: "GAME_DRAW" };
-        case "TERMINATED":
-          return { type: "GAME_TERMINATED" };
+		case "GAME": {
+			switch (parts[1]) {
+				case "START":
+					return { type: "GAME_START", goesFirst: parts[2] === "1" };
+				case "WINS":
+					return { type: "GAME_WINS" };
+				case "LOSS":
+					return { type: "GAME_LOSS" };
+				case "DRAW":
+					return { type: "GAME_DRAW" };
+				case "TERMINATED":
+					return { type: "GAME_TERMINATED" };
 
-        case "LIST": {
-          const data = parts[2] ?? "";
-          if (!data) return { type: "GAME_LIST", games: [] };
-          const games: GameEntry[] = data.split("|").map((g) => {
-            const [id, player1, player2] = g.split(",");
-            return { id: parseInt(id), player1, player2 };
-          });
-          return { type: "GAME_LIST", games };
-        }
+				case "LIST": {
+					const data = parts[2] ?? "";
+					if (!data) return { type: "GAME_LIST", games: [] };
+					const games: GameEntry[] = data.split("|").map((g) => {
+						const [id, player1, player2] = g.split(",");
+						return { id: parseInt(id), player1, player2 };
+					});
+					return { type: "GAME_LIST", games };
+				}
 
-        case "WATCH": {
-          if (parts[2] === "ACK") {
-            // GAME:WATCH:ACK:<id>,<p1>,<p2>|<username>,<col>|...
-            const data = parts.slice(3).join(":");
-            const segments = data.split("|");
-            const [idStr, player1, player2] = segments[0].split(",");
-            const moves: MoveEntry[] = segments.slice(1).filter(Boolean).map((m) => {
-              const lastComma = m.lastIndexOf(",");
-              return {
-                username: m.substring(0, lastComma),
-                column: parseInt(m.substring(lastComma + 1)),
-              };
-            });
-            return {
-              type: "GAME_WATCH_ACK",
-              matchId: parseInt(idStr),
-              player1,
-              player2,
-              moves,
-            };
-          }
-          break;
-        }
+				case "WATCH": {
+					if (parts[2] === "ACK") {
+						// GAME:WATCH:ACK:<id>,<p1>,<p2>|<username>,<col>|...
+						const data = parts.slice(3).join(":");
+						const segments = data.split("|");
+						const [idStr, player1, player2] = segments[0].split(",");
+						const moves: MoveEntry[] = segments
+							.slice(1)
+							.filter(Boolean)
+							.map((m) => {
+								const lastComma = m.lastIndexOf(",");
+								return {
+									username: m.substring(0, lastComma),
+									column: parseInt(m.substring(lastComma + 1)),
+								};
+							});
+						return {
+							type: "GAME_WATCH_ACK",
+							matchId: parseInt(idStr),
+							player1,
+							player2,
+							moves,
+						};
+					}
+					break;
+				}
 
-        case "MOVE":
-          // GAME:MOVE:<username>:<column>
-          return { type: "GAME_MOVE", username: parts[2], column: parseInt(parts[3]) };
+				case "MOVE":
+					// GAME:MOVE:<username>:<column>
+					return {
+						type: "GAME_MOVE",
+						username: parts[2],
+						column: parseInt(parts[3]),
+					};
 
-        case "WIN":
-          return { type: "GAME_WIN", winner: parts[2] };
-      }
-      break;
-    }
+				case "WIN":
+					return { type: "GAME_WIN", winner: parts[2] };
+			}
+			break;
+		}
 
-    case "OPPONENT":
-      return { type: "OPPONENT_MOVE", column: parseInt(parts[1]) };
+		case "OPPONENT":
+			return { type: "OPPONENT_MOVE", column: parseInt(parts[1]) };
 
-    case "PLAYER": {
-      if (parts[1] === "LIST") {
-        const data = parts[2] ?? "";
-        if (!data) return { type: "PLAYER_LIST", players: [] };
-        const players: PlayerEntry[] = data.split("|").map((p) => {
-          const [username, ready, inMatch] = p.split(",");
-          return { username, ready: ready === "true", inMatch: inMatch === "true" };
-        });
-        return { type: "PLAYER_LIST", players };
-      }
-      break;
-    }
+		case "PLAYER": {
+			if (parts[1] === "LIST") {
+				const data = parts[2] ?? "";
+				if (!data) return { type: "PLAYER_LIST", players: [] };
+				const players: PlayerEntry[] = data.split("|").map((p) => {
+					const [username, ready, inMatch] = p.split(",");
+					return {
+						username,
+						ready: ready === "true",
+						inMatch: inMatch === "true",
+					};
+				});
+				return { type: "PLAYER_LIST", players };
+			}
+			break;
+		}
 
-    case "TOURNAMENT": {
-      switch (parts[1]) {
-        case "START":
-          return { type: "TOURNAMENT_START", tournamentType: parts[2] };
-        case "CANCEL":
-          return { type: "TOURNAMENT_CANCEL" };
-        case "SCORES": {
-          const data = parts[2] ?? "";
-          if (!data) return { type: "TOURNAMENT_SCORES", scores: [] };
-          const scores: ScoreEntry[] = data.split("|").map((s) => {
-            const lastComma = s.lastIndexOf(",");
-            return {
-              player: s.substring(0, lastComma),
-              score: parseInt(s.substring(lastComma + 1)),
-            };
-          });
-          return { type: "TOURNAMENT_SCORES", scores };
-        }
-        case "END":
-          return { type: "TOURNAMENT_END" };
-      }
-      break;
-    }
+		case "TOURNAMENT": {
+			switch (parts[1]) {
+				case "START":
+					return { type: "TOURNAMENT_START", tournamentType: parts[2] };
+				case "CANCEL":
+					return { type: "TOURNAMENT_CANCEL" };
+				case "SCORES": {
+					const data = parts[2] ?? "";
+					if (!data) return { type: "TOURNAMENT_SCORES", scores: [] };
+					const scores: ScoreEntry[] = data.split("|").map((s) => {
+						const lastComma = s.lastIndexOf(",");
+						return {
+							player: s.substring(0, lastComma),
+							score: parseInt(s.substring(lastComma + 1)),
+						};
+					});
+					return { type: "TOURNAMENT_SCORES", scores };
+				}
+				case "END":
+					return { type: "TOURNAMENT_END" };
+			}
+			break;
+		}
 
-    case "ADMIN":
-      if (parts[1] === "AUTH" && parts[2] === "ACK") return { type: "ADMIN_AUTH_ACK" };
-      break;
+		case "ADMIN":
+			if (parts[1] === "AUTH" && parts[2] === "ACK")
+				return { type: "ADMIN_AUTH_ACK" };
+			break;
 
-    case "GET":
-      return { type: "GET_DATA", key: parts[1], value: parts[2] ?? "" };
+		case "GET":
+			return { type: "GET_DATA", key: parts[1], value: parts[2] ?? "" };
 
-    case "SET":
-      if (parts[2] === "ACK") return { type: "SET_DATA_ACK", key: parts[1] };
-      break;
+		case "SET":
+			if (parts[2] === "ACK") return { type: "SET_DATA_ACK", key: parts[1] };
+			break;
 
-    case "ERROR":
-      return { type: "ERROR", message: raw };
-  }
+		case "ERROR":
+			return { type: "ERROR", message: raw };
+	}
 
-  return { type: "UNKNOWN", raw };
+	return { type: "UNKNOWN", raw };
 }
 
 // ─── Command builders ────────────────────────────────────────────────────────
 
 export const cmd = {
-  connect: (username: string) => `CONNECT:${username}`,
-  reconnect: (username: string) => `RECONNECT:${username}`,
-  disconnect: () => "DISCONNECT",
-  ready: () => "READY",
-  play: (column: number) => `PLAY:${column}`,
-  playerList: () => "PLAYER:LIST",
-  gameList: () => "GAME:LIST",
-  gameWatch: (matchId: number) => `GAME:WATCH:${matchId}`,
-  gameTerminate: (matchId: number) => `GAME:TERMINATE:${matchId}`,
-  gameAward: (matchId: number, winner: string) => `GAME:AWARD:${matchId}:${winner}`,
-  adminAuth: (password: string) => `ADMIN:AUTH:${password}`,
-  adminKick: (username: string) => `ADMIN:KICK:${username}`,
-  tournamentStart: (type = "RoundRobin") => `TOURNAMENT:START:${type}`,
-  tournamentCancel: () => "TOURNAMENT:CANCEL",
-  getData: (key: "TOURNAMENT_STATUS" | "MOVE_WAIT" | "DEMO_MODE" | "MAX_TIMEOUT") =>
-    `GET:${key}`,
-  setData: (key: string, value: string) => `SET:${key}:${value}`,
-  reservationAdd: (p1: string, p2: string) => `RESERVATION:ADD:${p1},${p2}`,
-  reservationDelete: (p1: string, p2: string) => `RESERVATION:DELETE:${p1},${p2}`,
-  reservationGet: () => "RESERVATION:GET",
+	connect: (username: string) => `CONNECT:${username}`,
+	reconnect: (username: string) => `RECONNECT:${username}`,
+	disconnect: () => "DISCONNECT",
+	ready: () => "READY",
+	play: (column: number) => `PLAY:${column}`,
+	playerList: () => "PLAYER:LIST",
+	gameList: () => "GAME:LIST",
+	gameWatch: (matchId: number) => `GAME:WATCH:${matchId}`,
+	gameTerminate: (matchId: number) => `GAME:TERMINATE:${matchId}`,
+	gameAward: (matchId: number, winner: string) =>
+		`GAME:AWARD:${matchId}:${winner}`,
+	adminAuth: (password: string) => `ADMIN:AUTH:${password}`,
+	adminKick: (username: string) => `ADMIN:KICK:${username}`,
+	tournamentStart: (type = "RoundRobin") => `TOURNAMENT:START:${type}`,
+	tournamentCancel: () => "TOURNAMENT:CANCEL",
+	getData: (
+		key: "TOURNAMENT_STATUS" | "MOVE_WAIT" | "DEMO_MODE" | "MAX_TIMEOUT",
+	) => `GET:${key}`,
+	setData: (key: string, value: string) => `SET:${key}:${value}`,
+	reservationAdd: (p1: string, p2: string) => `RESERVATION:ADD:${p1},${p2}`,
+	reservationDelete: (p1: string, p2: string) =>
+		`RESERVATION:DELETE:${p1},${p2}`,
+	reservationGet: () => "RESERVATION:GET",
 };
 
 // ─── Board helpers ────────────────────────────────────────────────────────────
@@ -222,39 +243,39 @@ export type CellColor = 0 | 1 | 2;
 export type BoardState = CellColor[][]; // board[col][row], 7 cols × 6 rows
 
 export function createEmptyBoard(): BoardState {
-  return Array.from({ length: 7 }, () => Array(6).fill(0)) as BoardState;
+	return Array.from({ length: 7 }, () => Array(6).fill(0)) as BoardState;
 }
 
 /** Place a token and return the new board plus the row it landed in (-1 if column full). */
 export function placeToken(
-  board: BoardState,
-  color: 1 | 2,
-  column: number
+	board: BoardState,
+	color: 1 | 2,
+	column: number,
 ): { board: BoardState; row: number } {
-  const newBoard = board.map((col) => [...col]) as BoardState;
-  let placedRow = -1;
-  for (let row = 0; row < 6; row++) {
-    if (newBoard[column][row] === 0) {
-      newBoard[column][row] = color;
-      placedRow = row;
-      break;
-    }
-  }
-  return { board: newBoard, row: placedRow };
+	const newBoard = board.map((col) => [...col]) as BoardState;
+	let placedRow = -1;
+	for (let row = 0; row < 6; row++) {
+		if (newBoard[column][row] === 0) {
+			newBoard[column][row] = color;
+			placedRow = row;
+			break;
+		}
+	}
+	return { board: newBoard, row: placedRow };
 }
 
 /** Replay a move list onto an empty board. */
 export function replayMoves(
-  moves: MoveEntry[],
-  player1: string
+	moves: MoveEntry[],
+	player1: string,
 ): { board: BoardState; lastMove: { column: number; row: number } | null } {
-  let board = createEmptyBoard();
-  let lastMove: { column: number; row: number } | null = null;
-  for (const move of moves) {
-    const color: 1 | 2 = move.username === player1 ? 1 : 2;
-    const result = placeToken(board, color, move.column);
-    board = result.board;
-    lastMove = { column: move.column, row: result.row };
-  }
-  return { board, lastMove };
+	let board = createEmptyBoard();
+	let lastMove: { column: number; row: number } | null = null;
+	for (const move of moves) {
+		const color: 1 | 2 = move.username === player1 ? 1 : 2;
+		const result = placeToken(board, color, move.column);
+		board = result.board;
+		lastMove = { column: move.column, row: result.row };
+	}
+	return { board, lastMove };
 }
