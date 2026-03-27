@@ -82,12 +82,14 @@ export default function SpectatePage() {
 	}, []);
 
 	useEffect(() => {
-        if (status === "disconnected" && shouldRedirectToConnect) {
+		if (status === "disconnected" && shouldRedirectToConnect) {
 			clearRedirectFlag();
 			router.replace("/");
-		} else if (status === "idle") {
+		}
+		
+		if (status === "idle") {
 			router.replace("/");
-        }
+		}
 
 		if (role !== "observer" && status !== "idle") {
 			router.replace("/play");
@@ -147,37 +149,36 @@ export default function SpectatePage() {
 				}
 
 				case "GAME_MOVE": {
-					const gamesSnapshot = liveGamesRef.current;
-					for (const [id, game] of gamesSnapshot) {
-						if (
-							game.player1 === msg.username ||
-							game.player2 === msg.username
-						) {
-							const color: 1 | 2 = msg.username === game.player1 ? 1 : 2;
-							const { board: next, row } = placeToken(
-								game.board,
-								color,
-								msg.column,
-							);
-							updateGame(id, {
-								board: next,
-								lastMove: { column: msg.column, row },
-								currentTurnColor: (color === 1 ? 2 : 1) as 1 | 2,
-							});
-							break;
-						}
+					if (typeof msg.matchId !== "number") {
+						addLog("Protocol error: GAME_MOVE missing matchId");
+						break;
 					}
+
+					const game = liveGamesRef.current.get(msg.matchId);
+					if (!game) break;
+					const color: 1 | 2 = msg.username === game.player1 ? 1 : 2;
+					const { board: next, row } = placeToken(
+						game.board,
+						color,
+						msg.column,
+					);
+					updateGame(msg.matchId, {
+						board: next,
+						lastMove: { column: msg.column, row },
+						currentTurnColor: (color === 1 ? 2 : 1) as 1 | 2,
+					});
 					break;
 				}
 
 				case "GAME_WIN": {
-					const gamesSnapshot = liveGamesRef.current;
-					for (const [id, game] of gamesSnapshot) {
-						if (game.player1 === msg.winner || game.player2 === msg.winner) {
-							updateGame(id, { result: { kind: "win", winner: msg.winner } });
-							break;
-						}
+					if (typeof msg.matchId !== "number") {
+						addLog("Protocol error: GAME_WIN missing matchId");
+						break;
 					}
+
+					updateGame(msg.matchId, {
+						result: { kind: "win", winner: msg.winner },
+					});
 					setTimeout(() => {
 						send(cmd.gameList());
 						send(cmd.playerList());
@@ -186,15 +187,19 @@ export default function SpectatePage() {
 				}
 
 				case "GAME_DRAW":
-					if (selectedGame !== null) {
-						updateGame(selectedGame, { result: { kind: "draw" } });
+					if (typeof msg.matchId !== "number") {
+						addLog("Protocol error: GAME_DRAW missing matchId");
+						break;
 					}
+					updateGame(msg.matchId, { result: { kind: "draw" } });
 					break;
 
 				case "GAME_TERMINATED":
-					if (selectedGame !== null) {
-						updateGame(selectedGame, { result: { kind: "terminated" } });
+					if (typeof msg.matchId !== "number") {
+						addLog("Protocol error: GAME_TERMINATED missing matchId");
+						break;
 					}
+					updateGame(msg.matchId, { result: { kind: "terminated" } });
 					send(cmd.gameList());
 					break;
 

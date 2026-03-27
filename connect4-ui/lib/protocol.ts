@@ -22,9 +22,10 @@ export interface MoveEntry {
 	column: number;
 }
 
-export const DEFAULT_WS_URL = process.env.NODE_ENV === "development"
-	? "ws://localhost:8080"
-	: "wss://connect4.abunchofknowitalls.com";
+export const DEFAULT_WS_URL =
+	process.env.NODE_ENV === "development"
+		? "ws://localhost:8080"
+		: "wss://connect4.abunchofknowitalls.com";
 export const RECONNECT_INTERVAL_MS = 5000;
 export const RECONNECT_TIMEOUT_MS = 60000;
 
@@ -34,12 +35,13 @@ export type ParsedMessage =
 	| { type: "CONNECT_ACK" }
 	| { type: "RECONNECT_ACK" }
 	| { type: "DISCONNECT_ACK" }
+	| { type: "OBSERVE_ACK"; enabled: boolean }
 	| { type: "READY_ACK" }
 	| { type: "GAME_START"; goesFirst: boolean }
 	| { type: "GAME_WINS" }
 	| { type: "GAME_LOSS" }
-	| { type: "GAME_DRAW" }
-	| { type: "GAME_TERMINATED" }
+	| { type: "GAME_DRAW"; matchId?: number }
+	| { type: "GAME_TERMINATED"; matchId?: number }
 	| { type: "OPPONENT_MOVE"; column: number }
 	| { type: "GAME_LIST"; games: GameEntry[] }
 	| {
@@ -49,8 +51,8 @@ export type ParsedMessage =
 			player2: string;
 			moves: MoveEntry[];
 	  }
-	| { type: "GAME_MOVE"; username: string; column: number }
-	| { type: "GAME_WIN"; winner: string }
+	| { type: "GAME_MOVE"; matchId?: number; username: string; column: number }
+	| { type: "GAME_WIN"; matchId?: number; winner: string }
 	| { type: "PLAYER_LIST"; players: PlayerEntry[] }
 	| { type: "TOURNAMENT_START"; tournamentType: string }
 	| { type: "TOURNAMENT_CANCEL" }
@@ -77,11 +79,39 @@ export function parseMessage(raw: string): ParsedMessage {
 		case "DISCONNECT":
 			if (parts[1] === "ACK") return { type: "DISCONNECT_ACK" };
 			break;
+		case "OBSERVE":
+			if (parts[1] === "ACK") {
+				return { type: "OBSERVE_ACK", enabled: parts[2] === "1" };
+			}
+			break;
 		case "READY":
 			if (parts[1] === "ACK") return { type: "READY_ACK" };
 			break;
 
 		case "GAME": {
+			const scopedMatchId = parseInt(parts[1], 10);
+			if (!Number.isNaN(scopedMatchId)) {
+				switch (parts[2]) {
+					case "MOVE":
+						return {
+							type: "GAME_MOVE",
+							matchId: scopedMatchId,
+							username: parts[3],
+							column: parseInt(parts[4], 10),
+						};
+					case "WIN":
+						return {
+							type: "GAME_WIN",
+							matchId: scopedMatchId,
+							winner: parts[3],
+						};
+					case "DRAW":
+						return { type: "GAME_DRAW", matchId: scopedMatchId };
+					case "TERMINATED":
+						return { type: "GAME_TERMINATED", matchId: scopedMatchId };
+				}
+			}
+
 			switch (parts[1]) {
 				case "START":
 					return { type: "GAME_START", goesFirst: parts[2] === "1" };
@@ -130,23 +160,15 @@ export function parseMessage(raw: string): ParsedMessage {
 					}
 					break;
 				}
-
-				case "MOVE":
-					// GAME:MOVE:<username>:<column>
-					return {
-						type: "GAME_MOVE",
-						username: parts[2],
-						column: parseInt(parts[3]),
-					};
-
-				case "WIN":
-					return { type: "GAME_WIN", winner: parts[2] };
 			}
 			break;
 		}
 
 		case "OPPONENT":
-			return { type: "OPPONENT_MOVE", column: parseInt(parts[1]) };
+			return {
+				type: "OPPONENT_MOVE",
+				column: parseInt(parts[parts.length - 1], 10),
+			};
 
 		case "PLAYER": {
 			if (parts[1] === "LIST") {
@@ -214,6 +236,7 @@ export const cmd = {
 	connect: (username: string) => `CONNECT:${username}`,
 	reconnect: (username: string) => `RECONNECT:${username}`,
 	disconnect: () => "DISCONNECT",
+	observe: () => "OBSERVE",
 	ready: () => "READY",
 	play: (column: number) => `PLAY:${column}`,
 	playerList: () => "PLAYER:LIST",

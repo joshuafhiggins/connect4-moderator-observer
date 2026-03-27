@@ -147,7 +147,7 @@ export function ConnectionProvider({
 				if (!session) return;
 
 				if (session.role === "observer") {
-					setStatus("connected");
+					socket.send(cmd.observe());
 					return;
 				}
 
@@ -160,24 +160,31 @@ export function ConnectionProvider({
 
 			socket.onmessage = (event) => {
 				const raw = event.data as string;
+				console.log(raw);
 				const parsed = parseMessage(raw);
 
-				if (parsed.type === "CONNECT_ACK") {
-                    setRole("player");
+				if (parsed.type === "OBSERVE_ACK") {
+					setRole("observer");
+					setShouldRedirectToConnect(false);
+					setStatus("connected");
 				}
 
-                if (parsed.type === "RECONNECT_ACK") {
+				if (parsed.type === "CONNECT_ACK") {
+					setRole("player");
+				}
+
+				if (parsed.type === "RECONNECT_ACK") {
 					clearReconnectState();
 					setShouldRedirectToConnect(false);
 					setStatus("connected");
 				}
 
-                if (parsed.type === "DISCONNECT_ACK") {
-                    setRole("observer");
-                    setUsername("");
-                    isInMatchRef.current = false;
-                    setIsInMatch(false);
-                }
+				if (parsed.type === "DISCONNECT_ACK") {
+					setRole("observer");
+					setUsername("");
+					isInMatchRef.current = false;
+					setIsInMatch(false);
+				}
 
 				if (parsed.type === "GAME_START") {
 					isInMatchRef.current = true;
@@ -295,7 +302,6 @@ export function ConnectionProvider({
 		},
 		[clearReconnectState, openSocket],
 	);
-
 
 	const disconnect = useCallback(() => {
 		clearReconnectState();

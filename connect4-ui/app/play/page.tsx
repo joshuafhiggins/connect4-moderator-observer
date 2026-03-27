@@ -67,10 +67,14 @@ export default function PlayPage() {
 	}, []);
 
 	useEffect(() => {
-        if (status === "disconnected" && shouldRedirectToConnect) {
+		if (status === "disconnected" && shouldRedirectToConnect) {
 			clearRedirectFlag();
 			router.replace("/");
-		} 
+		}
+
+		if (status === "idle") {
+			router.replace("/");
+		}
 
 		if (role !== "player" && status !== "idle") {
 			router.replace("/spectate");
@@ -80,8 +84,6 @@ export default function PlayPage() {
 		if (status === "connected" && gamePhase === "idle") {
 			setGamePhase("connected");
 		}
-
-		
 	}, [
 		role,
 		status,
@@ -236,6 +238,8 @@ export default function PlayPage() {
 		myColor === 1 ? "🔴 Red" : myColor === 2 ? "🟡 Yellow" : null;
 	const opponentColor: 1 | 2 | null =
 		myColor === 1 ? 2 : myColor === 2 ? 1 : null;
+	const redPlayerName = myColor === 1 ? username : "Opponent";
+	const yellowPlayerName = myColor === 2 ? username : "Opponent";
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -418,8 +422,8 @@ export default function PlayPage() {
 							<Board
 								board={board}
 								lastMove={lastMove}
-								player1={username}
-								player2="Opponent"
+								player1={redPlayerName}
+								player2={yellowPlayerName}
 								currentTurnColor={
 									gamePhase === "playing" && myColor
 										? isMyTurn
