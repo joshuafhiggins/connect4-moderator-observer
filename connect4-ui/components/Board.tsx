@@ -54,7 +54,9 @@ export default function Board({
             <div className="w-3.5 h-3.5 rounded-full bg-yellow-400 shrink-0" />
             <span className="font-medium">{player2}</span>
             {currentTurnColor === 2 && (
-              <span className="text-xs text-yellow-400 animate-pulse">● Turn</span>
+              <span className="text-xs text-yellow-400 animate-pulse">
+                ● Turn
+              </span>
             )}
           </div>
         </div>
@@ -80,7 +82,9 @@ export default function Board({
               {/* Drop arrow indicator */}
               <div
                 className={`h-2 flex items-center justify-center transition-opacity ${
-                  hoveredCol === col && canInteract ? "opacity-100" : "opacity-0"
+                  hoveredCol === col && canInteract
+                    ? "opacity-100"
+                    : "opacity-0"
                 }`}
               >
                 <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white/70" />
@@ -98,21 +102,19 @@ export default function Board({
                     className={`w-12 h-12 rounded-full border-2 transition-all duration-150 ${
                       cell === 1
                         ? `bg-red-500 shadow-lg shadow-red-950/60 ${
-                            isLast
-                              ? "border-white scale-110"
-                              : "border-red-700"
+                            isLast ? "border-white scale-110" : "border-red-700"
                           }`
                         : cell === 2
-                        ? `bg-yellow-400 shadow-lg shadow-yellow-950/60 ${
-                            isLast
-                              ? "border-white scale-110"
-                              : "border-yellow-600"
-                          }`
-                        : `bg-slate-950 border-slate-800 ${
-                            hoveredCol === col && canInteract
-                              ? "border-blue-400/50"
-                              : ""
-                          }`
+                          ? `bg-yellow-400 shadow-lg shadow-yellow-950/60 ${
+                              isLast
+                                ? "border-white scale-110"
+                                : "border-yellow-600"
+                            }`
+                          : `bg-slate-950 border-slate-800 ${
+                              hoveredCol === col && canInteract
+                                ? "border-blue-400/50"
+                                : ""
+                            }`
                     }`}
                   />
                 );
