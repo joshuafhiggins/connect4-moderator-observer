@@ -33,11 +33,20 @@ export const RECONNECT_TIMEOUT_MS = 60000;
 
 export type ParsedMessage =
   | { type: "CONNECT_ACK" }
+  | { type: "CONNECT_EVENT"; username: string }
   | { type: "RECONNECT_ACK" }
   | { type: "DISCONNECT_ACK" }
+  | { type: "DISCONNECT_EVENT"; username: string }
   | { type: "OBSERVE_ACK"; enabled: boolean }
   | { type: "READY_ACK" }
+  | { type: "READY_EVENT"; username: string; ready: boolean }
   | { type: "GAME_START"; goesFirst: boolean }
+  | {
+      type: "GAME_MATCH_START";
+      matchId: number;
+      player1: string;
+      player2: string;
+    }
   | { type: "GAME_WINS" }
   | { type: "GAME_LOSS" }
   | { type: "GAME_DRAW"; matchId?: number }
@@ -72,12 +81,14 @@ export function parseMessage(raw: string): ParsedMessage {
   switch (parts[0]) {
     case "CONNECT":
       if (parts[1] === "ACK") return { type: "CONNECT_ACK" };
+      return { type: "CONNECT_EVENT", username: parts[1] ?? "" };
       break;
     case "RECONNECT":
       if (parts[1] === "ACK") return { type: "RECONNECT_ACK" };
       break;
     case "DISCONNECT":
       if (parts[1] === "ACK") return { type: "DISCONNECT_ACK" };
+      return { type: "DISCONNECT_EVENT", username: parts[1] ?? "" };
       break;
     case "OBSERVE":
       if (parts[1] === "ACK") {
@@ -86,6 +97,13 @@ export function parseMessage(raw: string): ParsedMessage {
       break;
     case "READY":
       if (parts[1] === "ACK") return { type: "READY_ACK" };
+      if (parts.length >= 3) {
+        return {
+          type: "READY_EVENT",
+          username: parts[1],
+          ready: parts[2] === "true",
+        };
+      }
       break;
 
     case "GAME": {
@@ -114,6 +132,15 @@ export function parseMessage(raw: string): ParsedMessage {
 
       switch (parts[1]) {
         case "START":
+          if (parts[2]?.includes(",")) {
+            const [matchId, player1, player2] = parts[2].split(",");
+            return {
+              type: "GAME_MATCH_START",
+              matchId: parseInt(matchId, 10),
+              player1,
+              player2,
+            };
+          }
           return { type: "GAME_START", goesFirst: parts[2] === "1" };
         case "WINS":
           return { type: "GAME_WINS" };

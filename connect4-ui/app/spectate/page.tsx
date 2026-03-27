@@ -51,7 +51,6 @@ export default function SpectatePage() {
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
   const [log, setLog] = useState<string[]>([]);
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const liveGamesRef = useRef<Map<number, LiveGame>>(new Map());
 
   const addLog = useCallback(
@@ -120,7 +119,44 @@ export default function SpectatePage() {
           break;
 
         case "TOURNAMENT_END":
+          setTournamentActive(false);
+          setTournamentType(null);
           addLog("Round ended");
+          send(cmd.gameList());
+          send(cmd.playerList());
+          break;
+
+        case "CONNECT_EVENT":
+          addLog(`Player joined: ${msg.username}`);
+          send(cmd.playerList());
+          break;
+
+        case "DISCONNECT_EVENT":
+          addLog(`Player left: ${msg.username}`);
+          send(cmd.playerList());
+          send(cmd.gameList());
+          break;
+
+        case "READY_EVENT": {
+          let found = false;
+          setPlayers((prev) =>
+            prev.map((player) => {
+              if (player.username !== msg.username) return player;
+              found = true;
+              return { ...player, ready: msg.ready };
+            }),
+          );
+
+          if (!found) {
+            send(cmd.playerList());
+          }
+          break;
+        }
+
+        case "GAME_MATCH_START":
+          addLog(
+            `Match started: #${msg.matchId} ${msg.player1} vs ${msg.player2}`,
+          );
           send(cmd.gameList());
           send(cmd.playerList());
           break;
@@ -228,29 +264,14 @@ export default function SpectatePage() {
     });
 
     return unsubscribe;
-  }, [addLog, selectedGame, send, subscribe, updateGame]);
+  }, [addLog, send, subscribe, updateGame]);
 
   useEffect(() => {
-    if (status !== "connected" || role !== "observer") {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-      return;
-    }
+    if (status !== "connected" || role !== "observer") return;
 
     send(cmd.getData("TOURNAMENT_STATUS"));
     send(cmd.gameList());
     send(cmd.playerList());
-
-    pollRef.current = setInterval(() => {
-      send(cmd.gameList());
-      send(cmd.playerList());
-    }, 5000);
-
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
   }, [role, send, status]);
 
   const selectedGameData =
