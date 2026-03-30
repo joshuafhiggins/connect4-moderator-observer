@@ -37,11 +37,12 @@ export default function Board({
                 : "border-gray-700 bg-gray-900 text-gray-400"
             }`}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-red-500 shrink-0" />
-            <span className="font-medium">{player1}</span>
-            {currentTurnColor === 1 && (
-              <span className="text-xs text-red-400 animate-pulse">● Turn</span>
+            {currentTurnColor === 1 ? (
+              <div className="w-3.5 h-3.5 rounded-full bg-red-500 shrink-0 animate-pulse" />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full bg-red-500 shrink-0" />
             )}
+            <span className="font-medium">{player1}</span>
           </div>
           <span className="text-gray-600 font-bold">vs</span>
           <div
@@ -51,13 +52,12 @@ export default function Board({
                 : "border-gray-700 bg-gray-900 text-gray-400"
             }`}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-yellow-400 shrink-0" />
-            <span className="font-medium">{player2}</span>
-            {currentTurnColor === 2 && (
-              <span className="text-xs text-yellow-400 animate-pulse">
-                ● Turn
-              </span>
+            {currentTurnColor === 2 ? (
+              <div className="w-3.5 h-3.5 rounded-full bg-yellow-400 shrink-0 animate-pulse" />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full bg-yellow-400 shrink-0" />
             )}
+            <span className="font-medium">{player2}</span>
           </div>
         </div>
       )}
@@ -128,9 +128,9 @@ export default function Board({
           {Array.from({ length: 7 }, (_, col) => (
             <div
               key={col}
-              className="w-12 p-1 text-center text-xs text-blue-400/70 font-mono"
+              className="w-14 p-1 text-center text-xs text-blue-400/70 font-mono"
             >
-              {col}
+              {col + 1}
             </div>
           ))}
         </div>

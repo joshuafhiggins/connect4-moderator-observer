@@ -1,26 +1,17 @@
 "use client";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useConnection } from "@/lib/connection";
-import { cmd, DEFAULT_WS_URL } from "@/lib/protocol";
+import { cmd } from "@/lib/protocol";
 
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { status, role, username, send, becomePlayer } = useConnection();
+  const { status, role, username, send, becomePlayer, disconnect } = useConnection();
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [nextUsername, setNextUsername] = useState(username);
-
-  const statusLabel =
-    status === "connected"
-      ? `Connected ${role === "player" ? `as ${username}` : "as observer"}`
-      : status === "reconnecting"
-        ? "Reconnecting..."
-        : status === "connecting"
-          ? "Connecting..."
-          : "Not connected";
   const isConnectionPage = pathname === "/";
 
   const disableRoleSwitch =
@@ -31,7 +22,7 @@ export default function Nav() {
     router.push("/spectate");
   };
 
-  const handleBecomePlayer = (event: FormEvent<HTMLFormElement>) => {
+  const handleBecomePlayer = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = nextUsername.trim();
     if (!trimmed) return;
@@ -50,31 +41,35 @@ export default function Nav() {
             className="text-lg font-bold text-white flex items-center gap-2"
           >
             <span className="text-2xl">🔴</span>
-            <span>Connect4</span>
-            <span className="text-gray-400 text-sm font-normal">Moderator</span>
+            <span>Connect4 Observer</span>
           </Link>
 
           <div className="ml-auto flex items-center gap-2">
             {!isConnectionPage && (
-              <button
-                onClick={
-                  role === "player"
-                    ? handleBecomeObserver
-                    : () => {
-                        setNextUsername(username);
-                        setShowPlayerModal(true);
-                      }
-                }
-                disabled={disableRoleSwitch}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white"
-              >
-                {role === "player" ? "Become Observer" : "Become Player"}
-              </button>
-            )}
+              <>
+                <button
+                  onClick={
+                    role === "player"
+                      ? handleBecomeObserver
+                      : () => {
+                          setNextUsername(username);
+                          setShowPlayerModal(true);
+                        }
+                  }
+                  disabled={disableRoleSwitch}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white"
+                >
+                  {role === "player" ? "Become Observer" : "Become Player"}
+                </button>
 
-            <div className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded-full">
-              {statusLabel}
-            </div>
+                <button
+                  onClick={disconnect}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-gray-700 hover:bg-red-600 text-white"
+                >
+                  Disconnect
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>

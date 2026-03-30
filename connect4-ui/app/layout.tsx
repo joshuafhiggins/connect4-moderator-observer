@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Celebration from "@/components/Celebration";
 import Nav from "@/components/Nav";
 import { ConnectionProvider } from "@/lib/connection";
 
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-gray-950 text-gray-100">
         <ConnectionProvider>
+          <Celebration />
           <Nav />
           <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
         </ConnectionProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Board from "@/components/Board";
 import {
@@ -30,6 +30,29 @@ interface LiveGame {
     | null;
 }
 
+interface KnockoutMatchView {
+  key: string;
+  roundIndex: number;
+  matchIndex: number;
+  player1: string | null;
+  player2: string | null;
+  winner: string | null;
+  currentTurnColor: 1 | 2 | null;
+  matchId: number | null;
+  status: "scheduled" | "live" | "completed";
+  resultKind: LiveGame["result"] extends infer T
+    ? T extends { kind: infer K }
+      ? K
+      : null
+    : null;
+}
+
+interface KnockoutRoundView {
+  label: string;
+  matches: KnockoutMatchView[];
+  projected?: boolean;
+}
+
 export default function SpectatePage() {
   const router = useRouter();
   const {
@@ -50,8 +73,11 @@ export default function SpectatePage() {
   const [liveGames, setLiveGames] = useState<Map<number, LiveGame>>(new Map());
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [knockoutRawData, setKnockoutRawData] = useState("");
+  const [tournamentWinner, setTournamentWinner] = useState<string | null>(null);
 
   const liveGamesRef = useRef<Map<number, LiveGame>>(new Map());
+  const initialBoardSyncPendingRef = useRef(true);
 
   const addLog = useCallback(
     (msg: string) =>
@@ -97,20 +123,35 @@ export default function SpectatePage() {
   }, [role, status, shouldRedirectToConnect, clearRedirectFlag, router]);
 
   useEffect(() => {
-    const unsubscribe = subscribe((msg: ParsedMessage) => {
+    const unsubscribe = subscribe((msg: ParsedMessage, raw: string) => {
+      if (
+        tournamentType === "KnockoutBracket" &&
+        msg.type === "UNKNOWN" &&
+        isKnockoutDataMessage(raw)
+      ) {
+        setKnockoutRawData(raw);
+      }
+
       switch (msg.type) {
         case "TOURNAMENT_START":
           setTournamentActive(true);
           setTournamentType(msg.tournamentType);
           setScores([]);
+          setKnockoutRawData("");
+          setTournamentWinner(null);
           addLog(`🏆 Tournament started: ${msg.tournamentType}`);
           send(cmd.gameList());
           send(cmd.playerList());
+          if (msg.tournamentType === "KnockoutBracket") {
+            send(cmd.getData("TOURNAMENT_DATA"));
+          }
           break;
 
         case "TOURNAMENT_CANCEL":
           setTournamentActive(false);
           setTournamentType(null);
+          setKnockoutRawData("");
+          setTournamentWinner(null);
           addLog("❌ Tournament cancelled");
           break;
 
@@ -124,6 +165,10 @@ export default function SpectatePage() {
           addLog("Round ended");
           send(cmd.gameList());
           send(cmd.playerList());
+          break;
+
+        case "TOURNAMENT_WINNER":
+          setTournamentWinner(msg.username);
           break;
 
         case "CONNECT_EVENT":
@@ -159,14 +204,25 @@ export default function SpectatePage() {
           );
           send(cmd.gameList());
           send(cmd.playerList());
+          if (tournamentType === "KnockoutBracket" && !knockoutRawData) {
+            send(cmd.getData("TOURNAMENT_DATA"));
+          }
           break;
 
         case "GAME_LIST":
           setGameList(msg.games);
+          const shouldHydrateWithWatch = initialBoardSyncPendingRef.current;
           for (const g of msg.games) {
-            if (!liveGamesRef.current.has(g.id)) {
+            const isNewMatch = !liveGamesRef.current.has(g.id);
+            updateGame(g.id, { player1: g.player1, player2: g.player2 });
+
+            if (isNewMatch && shouldHydrateWithWatch) {
               send(cmd.gameWatch(g.id));
             }
+          }
+
+          if (shouldHydrateWithWatch) {
+            initialBoardSyncPendingRef.current = false;
           }
           break;
 
@@ -251,6 +307,11 @@ export default function SpectatePage() {
           ) {
             setTournamentActive(true);
             setTournamentType(msg.value);
+            if (msg.value === "KnockoutBracket") {
+              send(cmd.getData("TOURNAMENT_DATA"));
+            }
+          } else if (msg.key === "TOURNAMENT_DATA" && msg.value) {
+            setKnockoutRawData(msg.value);
           }
           break;
 
@@ -264,11 +325,12 @@ export default function SpectatePage() {
     });
 
     return unsubscribe;
-  }, [addLog, send, subscribe, updateGame]);
+  }, [addLog, knockoutRawData, send, subscribe, tournamentType, updateGame]);
 
   useEffect(() => {
     if (status !== "connected" || role !== "observer") return;
 
+    initialBoardSyncPendingRef.current = true;
     send(cmd.getData("TOURNAMENT_STATUS"));
     send(cmd.gameList());
     send(cmd.playerList());
@@ -276,26 +338,28 @@ export default function SpectatePage() {
 
   const selectedGameData =
     selectedGame !== null ? liveGames.get(selectedGame) : null;
+  const showLeaderboard = tournamentType === "RoundRobin";
+  const showKnockoutBracket = tournamentType === "KnockoutBracket";
+  const knockoutRounds = useMemo(
+    () => parseKnockoutRounds(knockoutRawData),
+    [knockoutRawData],
+  );
+  const sortedPlayers = useMemo(
+    () =>
+      [...players].sort((a, b) =>
+        a.username.localeCompare(b.username, undefined, {
+          sensitivity: "base",
+        }),
+      ),
+    [players],
+  );
+  const knockoutBracket = useMemo(
+    () => buildKnockoutBracket(knockoutRounds, liveGames, tournamentWinner),
+    [knockoutRounds, liveGames, tournamentWinner],
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            👁 Observer Dashboard
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Unified spectate and tournament view
-          </p>
-        </div>
-        <button
-          onClick={disconnect}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          Disconnect
-        </button>
-      </div>
-
       {status !== "connected" && (
         <div className="rounded-lg border border-yellow-700 bg-yellow-950/30 px-4 py-3 text-sm text-yellow-200">
           Waiting for observer connection...
@@ -329,34 +393,6 @@ export default function SpectatePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="flex flex-col gap-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-              Leaderboard
-            </h2>
-            {scores.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-4">
-                No scores yet
-              </p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {scores.map((s, i) => (
-                  <div
-                    key={s.player}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800"
-                  >
-                    <span className="text-sm font-bold w-6 text-gray-300">
-                      {i + 1}.
-                    </span>
-                    <span className="text-white flex-1 font-medium text-sm">
-                      {s.player}
-                    </span>
-                    <span className="text-blue-400 font-bold">{s.score}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3 flex items-center justify-between">
               <span>Players</span>
               <span className="text-xs text-gray-500 font-normal">
@@ -369,7 +405,7 @@ export default function SpectatePage() {
               </p>
             ) : (
               <div className="flex flex-col gap-1.5">
-                {players.map((p) => (
+                {sortedPlayers.map((p) => (
                   <div
                     key={p.username}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800"
@@ -396,29 +432,140 @@ export default function SpectatePage() {
             )}
           </div>
 
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Event Log
-            </h2>
-            <div className="flex flex-col gap-0.5 max-h-40 overflow-y-auto">
-              {log.slice(0, 20).map((entry, i) => (
-                <p key={i} className="text-xs text-gray-400 font-mono">
-                  {entry}
+          {showLeaderboard && (
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+                Leaderboard
+              </h2>
+              {scores.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">
+                  No scores yet
                 </p>
-              ))}
-              {log.length === 0 && (
-                <p className="text-gray-600 text-xs">No events yet</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {scores.map((s, i) => (
+                    <div
+                      key={s.player}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800"
+                    >
+                      <span className="text-sm font-bold w-6 text-gray-300">
+                        {i + 1}.
+                      </span>
+                      <span className="text-white flex-1 font-medium text-sm">
+                        {s.player}
+                      </span>
+                      <span className="text-blue-400 font-bold">{s.score}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          </div>
+          )}
         </div>
 
         <div className="lg:col-span-2 flex flex-col gap-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-              Active Matches
+              {showKnockoutBracket ? "Tournament Bracket" : "Active Matches"}
             </h2>
-            {gameList.length === 0 ? (
+            {showKnockoutBracket ? (
+              knockoutBracket.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-950/60 px-4 py-6 text-center text-sm text-gray-500">
+                  Knockout seeding is still in progress. The bracket will appear
+                  once tournament data is available.
+                </div>
+              ) : (
+                <div className="overflow-x-auto pb-2">
+                  <div className="flex min-w-max place-content-center items-stretch gap-10">
+                    {knockoutBracket.map((round) => (
+                      <div
+                        key={round.label}
+                        className="flex w-60 shrink-0 flex-col"
+                      >
+                        <div className="mb-3 text-center">
+                          <span className="block text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                            {round.label}
+                          </span>
+                        </div>
+                        <div className="flex flex-1 flex-col justify-center gap-3">
+                          {round.matches.map((match) => {
+                            const isSelected =
+                              match.matchId !== null &&
+                              selectedGame === match.matchId;
+                            const canSelect = match.matchId !== null;
+                            const borderClass =
+                              match.status === "completed"
+                                ? "border-green-700/80"
+                                : "border-gray-700";
+
+                            const Tag = canSelect ? "button" : "div";
+
+                            return (
+                              <Tag
+                                key={match.key}
+                                {...(canSelect
+                                  ? {
+                                      onClick: () =>
+                                        setSelectedGame(
+                                          isSelected ? null : match.matchId,
+                                        ),
+                                      type: "button" as const,
+                                    }
+                                  : {})}
+                                className={`w-full rounded-xl border bg-gray-950/70 p-3 text-left transition-colors ${borderClass} ${
+                                  canSelect
+                                    ? isSelected
+                                      ? "ring-1 ring-blue-400"
+                                      : "hover:border-blue-700/80"
+                                    : ""
+                                }`}
+                              >
+                                <div className="flex flex-col gap-2">
+                                  <BracketPlayerRow
+                                    name={match.player1}
+                                    playerColor={1}
+                                    isActive={match.currentTurnColor === 1}
+                                  />
+                                  <BracketPlayerRow
+                                    name={match.player2}
+                                    playerColor={2}
+                                    isActive={match.currentTurnColor === 2}
+                                  />
+                                  <div className="flex items-center justify-between pt-1 text-xs">
+                                    <span className="text-gray-500">
+                                      {match.matchId !== null
+                                        ? `Match #${match.matchId}`
+                                        : "Awaiting match"}
+                                    </span>
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 ${
+                                        match.status === "completed"
+                                          ? "bg-green-950/70 text-green-300"
+                                          : match.status === "live"
+                                            ? "bg-blue-950/70 text-blue-300"
+                                            : "bg-gray-800 text-gray-400"
+                                      }`}
+                                    >
+                                      {match.status === "completed"
+                                        ? match.resultKind === "draw"
+                                          ? "Tie"
+                                          : "Complete"
+                                        : match.status === "live"
+                                          ? "Live"
+                                          : "Pending"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </Tag>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : gameList.length === 0 ? (
               <p className="text-gray-500 text-sm text-center py-3">
                 No active matches
               </p>
@@ -508,4 +655,208 @@ export default function SpectatePage() {
       </div>
     </div>
   );
+}
+
+function BracketPlayerRow({
+  name,
+  playerColor,
+  isActive,
+}: {
+  name: string | null;
+  playerColor: 1 | 2;
+  isActive: boolean;
+}) {
+  const isRed = playerColor === 1;
+
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+        isActive
+          ? isRed
+            ? "border-red-500 bg-red-950/50 text-red-300"
+            : "border-yellow-500 bg-yellow-950/50 text-yellow-300"
+          : "border-gray-700 bg-gray-900 text-gray-400"
+      }`}
+    >
+      {name && (
+        <div
+          className={`h-3.5 w-3.5 shrink-0 rounded-full ${
+            isRed ? "bg-red-500" : "bg-yellow-400"
+          } ${isActive ? "animate-pulse" : ""}`}
+        />
+      )}
+      <span className={`font-medium ${name ? "" : "text-gray-500"}`}>
+        {name ?? "TBD"}
+      </span>
+    </div>
+  );
+}
+
+function isKnockoutDataMessage(raw: string) {
+  return !raw.includes(":") && (raw.includes(",") || raw.includes("|"));
+}
+
+function parseKnockoutRounds(raw: string) {
+  if (!raw) return [] as string[][];
+
+  return raw
+    .split("|")
+    .filter(Boolean)
+    .map((round) =>
+      round
+        .split(",")
+        .map((player) => player.trim())
+        .filter(Boolean),
+    )
+    .filter((round) => round.length > 0);
+}
+
+function buildKnockoutBracket(
+  rounds: string[][],
+  liveGames: Map<number, LiveGame>,
+  tournamentWinner: string | null,
+) {
+  if (rounds.length === 0) return [] as KnockoutRoundView[];
+
+  const liveGameEntries = Array.from(liveGames.values()).sort(
+    (a, b) => b.id - a.id,
+  );
+  const displayRounds: Array<{
+    label: string;
+    players: Array<string | null>;
+    projected?: boolean;
+  }> = rounds.map((players, index) => ({
+    label: knockoutRoundLabel(index, players.length),
+    players,
+  }));
+
+  while (displayRounds[displayRounds.length - 1]?.players.length > 2) {
+    const latestRoundPlayers = displayRounds[displayRounds.length - 1].players;
+    const projectedPlayers = latestRoundPlayers.reduce<Array<string | null>>(
+      (acc, _, index, source) => {
+        if (index % 2 !== 0) return acc;
+        const player1 = source[index] ?? null;
+        const player2 = source[index + 1] ?? null;
+        const liveMatch = findLiveMatch(liveGameEntries, player1, player2);
+        acc.push(
+          resolveLiveWinner(liveMatch, tournamentWinner, player1, player2),
+        );
+        return acc;
+      },
+      [],
+    );
+
+    displayRounds.push({
+      label: knockoutRoundLabel(displayRounds.length, projectedPlayers.length),
+      players: projectedPlayers,
+      projected: true,
+    });
+  }
+
+  return displayRounds.map((round, roundIndex) => ({
+    label: round.label,
+    projected: round.projected,
+    matches: pairPlayers(round.players).map(
+      ([player1, player2], matchIndex) => {
+        const nextRound = displayRounds[roundIndex + 1];
+        const nextRoundPlayer = nextRound?.players[matchIndex] ?? null;
+        const liveMatch = findLiveMatch(liveGameEntries, player1, player2);
+        const isProjectedRound = Boolean(round.projected);
+        const hasKnownPlayers = Boolean(player1 && player2);
+        const hasAdvancedPastRound =
+          roundIndex < rounds.length - 1 &&
+          !displayRounds[roundIndex + 1]?.projected;
+        const inferredCompletedRealMatch =
+          !isProjectedRound && hasKnownPlayers && !liveMatch;
+        const winner =
+          nextRoundPlayer &&
+          (nextRoundPlayer === player1 || nextRoundPlayer === player2)
+            ? nextRoundPlayer
+            : resolveLiveWinner(liveMatch, tournamentWinner, player1, player2);
+        const status =
+          winner || hasAdvancedPastRound || inferredCompletedRealMatch
+            ? "completed"
+            : liveMatch
+              ? "live"
+              : "scheduled";
+
+        return {
+          key: `${roundIndex}-${matchIndex}-${player1 ?? "tbd"}-${player2 ?? "tbd"}`,
+          roundIndex,
+          matchIndex,
+          player1,
+          player2,
+          winner,
+          currentTurnColor: winner
+            ? null
+            : (liveMatch?.currentTurnColor ?? null),
+          matchId: liveMatch?.id ?? null,
+          status,
+          resultKind: liveMatch?.result?.kind ?? null,
+        } satisfies KnockoutMatchView;
+      },
+    ),
+  }));
+}
+
+function pairPlayers(players: Array<string | null>) {
+  const pairs: Array<[string | null, string | null]> = [];
+  for (let index = 0; index < players.length; index += 2) {
+    pairs.push([players[index] ?? null, players[index + 1] ?? null]);
+  }
+  return pairs;
+}
+
+function findLiveMatch(
+  liveGames: LiveGame[],
+  player1: string | null,
+  player2: string | null,
+) {
+  if (!player1 || !player2) return null;
+
+  return (
+    liveGames.find((game) =>
+      samePlayers(game.player1, game.player2, player1, player2),
+    ) ?? null
+  );
+}
+
+function resolveLiveWinner(
+  liveMatch: LiveGame | null,
+  tournamentWinner: string | null,
+  player1: string | null,
+  player2: string | null,
+) {
+  if (liveMatch?.result?.kind === "win") {
+    return liveMatch.result.winner;
+  }
+
+  if (
+    tournamentWinner &&
+    (tournamentWinner === player1 || tournamentWinner === player2)
+  ) {
+    return tournamentWinner;
+  }
+
+  return null;
+}
+
+function samePlayers(
+  left1: string,
+  left2: string,
+  right1: string,
+  right2: string,
+) {
+  return (
+    (left1 === right1 && left2 === right2) ||
+    (left1 === right2 && left2 === right1)
+  );
+}
+
+function knockoutRoundLabel(roundIndex: number, playerCount: number) {
+  if (playerCount <= 1) return "Champion";
+  if (playerCount === 2) return "Final";
+  if (playerCount === 4) return "Semifinals";
+  if (playerCount === 8) return "Quarterfinals";
+  return `Round ${roundIndex + 1}`;
 }

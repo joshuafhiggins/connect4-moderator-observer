@@ -66,6 +66,7 @@ export type ParsedMessage =
   | { type: "TOURNAMENT_START"; tournamentType: string }
   | { type: "TOURNAMENT_CANCEL" }
   | { type: "TOURNAMENT_SCORES"; scores: ScoreEntry[] }
+  | { type: "TOURNAMENT_WINNER"; username: string }
   | { type: "TOURNAMENT_END" }
   | { type: "ADMIN_AUTH_ACK" }
   | { type: "GET_DATA"; key: string; value: string }
@@ -232,6 +233,8 @@ export function parseMessage(raw: string): ParsedMessage {
           });
           return { type: "TOURNAMENT_SCORES", scores };
         }
+        case "WINNER":
+          return { type: "TOURNAMENT_WINNER", username: parts[2] ?? "" };
         case "END":
           return { type: "TOURNAMENT_END" };
       }
@@ -244,7 +247,11 @@ export function parseMessage(raw: string): ParsedMessage {
       break;
 
     case "GET":
-      return { type: "GET_DATA", key: parts[1], value: parts[2] ?? "" };
+      return {
+        type: "GET_DATA",
+        key: parts[1],
+        value: parts.slice(2).join(":"),
+      };
 
     case "SET":
       if (parts[2] === "ACK") return { type: "SET_DATA_ACK", key: parts[1] };
@@ -277,7 +284,12 @@ export const cmd = {
   tournamentStart: (type = "RoundRobin") => `TOURNAMENT:START:${type}`,
   tournamentCancel: () => "TOURNAMENT:CANCEL",
   getData: (
-    key: "TOURNAMENT_STATUS" | "MOVE_WAIT" | "DEMO_MODE" | "MAX_TIMEOUT",
+    key:
+      | "TOURNAMENT_STATUS"
+      | "TOURNAMENT_DATA"
+      | "MOVE_WAIT"
+      | "DEMO_MODE"
+      | "MAX_TIMEOUT",
   ) => `GET:${key}`,
   setData: (key: string, value: string) => `SET:${key}:${value}`,
   reservationAdd: (p1: string, p2: string) => `RESERVATION:ADD:${p1},${p2}`,

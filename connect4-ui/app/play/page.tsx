@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Confetti from "react-confetti";
 import Board from "@/components/Board";
 import {
   BoardState,
@@ -16,6 +17,8 @@ type GamePhase = "idle" | "connected" | "ready" | "playing" | "game-over";
 
 type GameResult = "win" | "loss" | "draw" | "terminated";
 
+const WIN_CONFETTI_DURATION_MS = 10000;
+
 export default function PlayPage() {
   const router = useRouter();
   const {
@@ -24,7 +27,6 @@ export default function PlayPage() {
     status,
     send,
     subscribe,
-    disconnect,
     reconnectAttempts,
     shouldRedirectToConnect,
     clearRedirectFlag,
@@ -39,32 +41,49 @@ export default function PlayPage() {
     row: number;
   } | null>(null);
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
-  const [moveCount, setMoveCount] = useState(0);
-  const [statusMessages, setStatusMessages] = useState<string[]>([]);
   const [tournamentMode, setTournamentMode] = useState(false);
+  const [showWinConfetti, setShowWinConfetti] = useState(false);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
   const myColorRef = useRef<1 | 2 | null>(null);
   const isMyTurnRef = useRef(false);
 
-  const addStatus = useCallback(
-    (msg: string) =>
-      setStatusMessages((prev) => [
-        `[${new Date().toLocaleTimeString()}] ${msg}`,
-        ...prev.slice(0, 29),
-      ]),
-    [],
-  );
-
   const resetGame = useCallback(() => {
     setBoard(createEmptyBoard());
     setLastMove(null);
-    setMoveCount(0);
     setMyColor(null);
     myColorRef.current = null;
     setIsMyTurn(false);
     isMyTurnRef.current = false;
     setGameResult(null);
   }, []);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (gameResult !== "win") {
+      return;
+    }
+
+    setShowWinConfetti(true);
+    const timeoutId = setTimeout(
+      () => setShowWinConfetti(false),
+      WIN_CONFETTI_DURATION_MS,
+    );
+
+    return () => clearTimeout(timeoutId);
+  }, [gameResult]);
 
   useEffect(() => {
     if (status === "disconnected" && shouldRedirectToConnect) {
@@ -99,16 +118,13 @@ export default function PlayPage() {
         case "CONNECT_ACK":
         case "RECONNECT_ACK":
           setGamePhase((prev) => (prev === "idle" ? "connected" : prev));
-          addStatus("Connected to server");
           break;
 
         case "ERROR":
-          addStatus(`⚠ ${msg.message}`);
           break;
 
         case "READY_ACK":
           setGamePhase("ready");
-          addStatus("⏳ Waiting for an opponent...");
           break;
 
         case "GAME_START": {
@@ -120,11 +136,6 @@ export default function PlayPage() {
           const firstTurn = msg.goesFirst;
           setIsMyTurn(firstTurn);
           isMyTurnRef.current = firstTurn;
-          addStatus(
-            msg.goesFirst
-              ? "🔴 You are Red - you go first"
-              : "🟡 You are Yellow - wait for opponent's move",
-          );
           break;
         }
 
@@ -139,10 +150,8 @@ export default function PlayPage() {
             setLastMove({ column: msg.column, row });
             return next;
           });
-          setMoveCount((n) => n + 1);
           setIsMyTurn(true);
           isMyTurnRef.current = true;
-          addStatus(`Opponent played column ${msg.column}`);
           break;
         }
 
@@ -151,7 +160,6 @@ export default function PlayPage() {
           setGamePhase("game-over");
           setIsMyTurn(false);
           isMyTurnRef.current = false;
-          addStatus("🏆 You won!");
           break;
 
         case "GAME_LOSS":
@@ -159,7 +167,6 @@ export default function PlayPage() {
           setGamePhase("game-over");
           setIsMyTurn(false);
           isMyTurnRef.current = false;
-          addStatus("💔 You lost");
           break;
 
         case "GAME_DRAW":
@@ -167,7 +174,6 @@ export default function PlayPage() {
           setGamePhase("game-over");
           setIsMyTurn(false);
           isMyTurnRef.current = false;
-          addStatus("🤝 Draw");
           break;
 
         case "GAME_TERMINATED":
@@ -175,12 +181,10 @@ export default function PlayPage() {
           setGamePhase("game-over");
           setIsMyTurn(false);
           isMyTurnRef.current = false;
-          addStatus("⛔ Match terminated");
           break;
 
         case "TOURNAMENT_START":
           setTournamentMode(true);
-          addStatus(`🏆 Tournament started: ${msg.tournamentType}`);
           break;
 
         case "TOURNAMENT_END":
@@ -188,14 +192,12 @@ export default function PlayPage() {
           resetGame();
           send(cmd.ready());
           setGamePhase("ready");
-          addStatus("⏳ Ready for next round...");
           break;
 
         case "TOURNAMENT_CANCEL":
           setTournamentMode(false);
           setGamePhase("connected");
           resetGame();
-          addStatus("Tournament cancelled");
           break;
 
         default:
@@ -204,7 +206,7 @@ export default function PlayPage() {
     });
 
     return unsubscribe;
-  }, [addStatus, resetGame, send, subscribe]);
+  }, [resetGame, send, subscribe]);
 
   const handleColumnClick = useCallback(
     (col: number) => {
@@ -221,18 +223,15 @@ export default function PlayPage() {
 
       setIsMyTurn(false);
       isMyTurnRef.current = false;
-      setMoveCount((n) => n + 1);
       send(cmd.play(col));
-      addStatus(`You played column ${col}`);
     },
-    [addStatus, gamePhase, send],
+    [gamePhase, send],
   );
 
   const sendReady = useCallback(() => {
     send(cmd.ready());
     setGamePhase("ready");
-    addStatus("⏳ Waiting for an opponent...");
-  }, [addStatus, send]);
+  }, [send]);
 
   const myColorLabel =
     myColor === 1 ? "🔴 Red" : myColor === 2 ? "🟡 Yellow" : null;
@@ -243,6 +242,17 @@ export default function PlayPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {showWinConfetti && (
+        <Confetti
+          width={viewport.width}
+          height={viewport.height}
+          recycle={false}
+          numberOfPieces={300}
+          gravity={0.28}
+          className="pointer-events-none fixed! inset-0! z-40!"
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">🎮 Play Connect4</h1>
@@ -262,26 +272,6 @@ export default function PlayPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="flex flex-col gap-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-              Session
-            </h2>
-
-            <div className="text-xs text-gray-400">
-              Status: <span className="text-gray-200">{status}</span>
-            </div>
-            <div className="text-xs text-gray-400">
-              User: <span className="text-gray-200">{username}</span>
-            </div>
-
-            <button
-              onClick={disconnect}
-              className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Disconnect
-            </button>
-          </div>
-
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
               Match
@@ -313,9 +303,6 @@ export default function PlayPage() {
               myColor && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800">
-                    <div
-                      className={`w-4 h-4 rounded-full ${myColor === 1 ? "bg-red-500" : "bg-yellow-400"}`}
-                    />
                     <span className="text-white font-medium text-sm">
                       You are {myColorLabel}
                     </span>
@@ -334,10 +321,6 @@ export default function PlayPage() {
                         : "⏳ Waiting for opponent..."}
                     </div>
                   )}
-
-                  <div className="text-xs text-gray-500 text-center">
-                    {moveCount} move{moveCount !== 1 ? "s" : ""} played
-                  </div>
                 </div>
               )}
 
@@ -349,23 +332,6 @@ export default function PlayPage() {
                 Play Again
               </button>
             )}
-          </div>
-
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Status Log
-            </h2>
-            <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto">
-              {statusMessages.length === 0 ? (
-                <p className="text-gray-600 text-xs">No events yet</p>
-              ) : (
-                statusMessages.map((m, i) => (
-                  <p key={i} className="text-xs text-gray-400 font-mono">
-                    {m}
-                  </p>
-                ))
-              )}
-            </div>
           </div>
         </div>
 
@@ -418,7 +384,6 @@ export default function PlayPage() {
                         : "⛔ Match Terminated"}
                 </div>
               )}
-
               <Board
                 board={board}
                 lastMove={lastMove}
@@ -455,7 +420,7 @@ function PhaseIndicator({
 }) {
   if (phase === "playing" && isMyTurn) {
     return (
-      <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-green-900/60 text-green-300 animate-pulse">
+      <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-green-900/60 text-green-300">
         Your Turn!
       </span>
     );

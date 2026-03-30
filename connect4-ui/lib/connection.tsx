@@ -160,7 +160,9 @@ export function ConnectionProvider({
 
       socket.onmessage = (event) => {
         const raw = event.data as string;
-        console.log(raw);
+        if (process.env.NODE_ENV === "development") {
+          console.log("Recieved: " + raw);
+        }
         const parsed = parseMessage(raw);
 
         if (parsed.type === "OBSERVE_ACK") {
@@ -319,6 +321,9 @@ export function ConnectionProvider({
 
   const send = useCallback((message: string) => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+    if (process.env.NODE_ENV === "development") {
+      console.log("Sending: " + message);
+    }
     wsRef.current.send(message);
     return true;
   }, []);
