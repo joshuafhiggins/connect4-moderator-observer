@@ -9,7 +9,8 @@ import { cmd } from "@/lib/protocol";
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { status, role, username, send, becomePlayer, disconnect } = useConnection();
+  const { status, role, username, send, becomePlayer, disconnect } =
+    useConnection();
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [nextUsername, setNextUsername] = useState(username);
   const isConnectionPage = pathname === "/";
@@ -47,21 +48,18 @@ export default function Nav() {
           <div className="ml-auto flex items-center gap-2">
             {!isConnectionPage && (
               <>
-                <button
-                  onClick={
-                    role === "player"
-                      ? handleBecomeObserver
-                      : () => {
-                          setNextUsername(username);
-                          setShowPlayerModal(true);
-                        }
-                  }
-                  disabled={disableRoleSwitch}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white"
-                >
-                  {role === "player" ? "Become Observer" : "Become Player"}
-                </button>
-
+                {role !== "player" && (
+                  <button
+                    onClick={() => {
+                      setNextUsername(username);
+                      setShowPlayerModal(true);
+                    }}
+                    disabled={disableRoleSwitch}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white"
+                  >
+                    Become Player
+                  </button>
+                )}
                 <button
                   onClick={disconnect}
                   className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-gray-700 hover:bg-red-600 text-white"

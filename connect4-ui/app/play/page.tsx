@@ -260,7 +260,17 @@ export default function PlayPage() {
             Connected as <span className="text-green-300">{username}</span>
           </p>
         </div>
-        <PhaseIndicator phase={gamePhase} isMyTurn={isMyTurn} />
+        <div className="flex items-center gap-3">
+          {gamePhase === "connected" && (
+            <button
+              onClick={sendReady}
+              className="rounded-full border border-green-700 bg-green-900/60 px-3 py-1.5 text-sm font-medium text-green-300 transition-colors hover:bg-green-800/70"
+            >
+              Ready Up
+            </button>
+          )}
+          <PhaseIndicator phase={gamePhase} isMyTurn={isMyTurn} />
+        </div>
       </div>
 
       {status === "reconnecting" && (
@@ -270,72 +280,38 @@ export default function PlayPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="flex flex-col gap-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-              Match
-            </h2>
-
-            {tournamentMode && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-950/50 border border-purple-700 text-purple-300 text-sm">
-                <span>🏆</span>
-                <span>Tournament mode active</span>
-              </div>
-            )}
-
-            {gamePhase === "connected" && (
-              <button
-                onClick={sendReady}
-                className="w-full py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                ✋ Ready to Play
-              </button>
-            )}
-
-            {gamePhase === "ready" && (
-              <div className="text-center py-3 text-yellow-300 text-sm animate-pulse">
-                ⏳ Waiting for opponent...
-              </div>
-            )}
-
-            {(gamePhase === "playing" || gamePhase === "game-over") &&
-              myColor && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800">
-                    <span className="text-white font-medium text-sm">
-                      You are {myColorLabel}
-                    </span>
-                  </div>
-
-                  {gamePhase === "playing" && (
-                    <div
-                      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm ${
-                        isMyTurn
-                          ? "bg-green-900/50 border border-green-600 text-green-300 animate-pulse"
-                          : "bg-gray-800 text-gray-400"
-                      }`}
-                    >
-                      {isMyTurn
-                        ? "⬆ Your turn - click a column"
-                        : "⏳ Waiting for opponent..."}
-                    </div>
-                  )}
-                </div>
-              )}
-
-            {gamePhase === "game-over" && gameResult && !tournamentMode && (
-              <button
-                onClick={sendReady}
-                className="w-full py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                Play Again
-              </button>
-            )}
-          </div>
+      {tournamentMode && (
+        <div className="flex items-center gap-2 rounded-lg border border-purple-700 bg-purple-950/50 px-3 py-2 text-sm text-purple-300">
+          <span>🏆</span>
+          <span>Tournament mode active</span>
         </div>
+      )}
 
-        <div className="lg:col-span-2 bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col items-center justify-center gap-4 min-h-96">
+      {(gamePhase === "playing" || gamePhase === "game-over") && myColor && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3 rounded-lg bg-gray-800 px-3 py-2">
+            <span className="text-sm font-medium text-white">
+              You are {myColorLabel}
+            </span>
+          </div>
+
+          {gamePhase === "playing" && (
+            <div
+              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+                isMyTurn
+                  ? "animate-pulse border border-green-600 bg-green-900/50 text-green-300"
+                  : "bg-gray-800 text-gray-400"
+              }`}
+            >
+              {isMyTurn
+                ? "⬆ Your turn - click a column"
+                : "⏳ Waiting for opponent..."}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col items-center justify-center gap-4 min-h-96">
           {gamePhase === "idle" ? (
             <div className="text-gray-500 text-center py-10">
               Connect from the connection page to start.
@@ -349,9 +325,9 @@ export default function PlayPage() {
               <p className="text-gray-500 text-sm max-w-sm">
                 Click the{" "}
                 <span className="text-green-300 font-semibold">
-                  Ready to Play
+                  Ready Up
                 </span>{" "}
-                button in the Match panel to enter the queue.
+                button beside your status to enter the queue.
               </p>
             </div>
           ) : gamePhase === "ready" ? (
@@ -405,7 +381,6 @@ export default function PlayPage() {
               />
             </>
           )}
-        </div>
       </div>
     </div>
   );

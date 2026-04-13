@@ -106,6 +106,13 @@ export default function SpectatePage() {
     });
   }, []);
 
+  const resetLiveGames = useCallback(() => {
+    const next = new Map<number, LiveGame>();
+    liveGamesRef.current = next;
+    setLiveGames(next);
+    setSelectedGame(null);
+  }, []);
+
   useEffect(() => {
     if (status === "disconnected" && shouldRedirectToConnect) {
       clearRedirectFlag();
@@ -156,6 +163,7 @@ export default function SpectatePage() {
           break;
 
         case "TOURNAMENT_SCORES":
+          resetLiveGames();
           setScores(msg.scores);
           break;
 
@@ -199,10 +207,15 @@ export default function SpectatePage() {
         }
 
         case "GAME_MATCH_START":
+          updateGame(msg.matchId, {
+            player1: msg.player1,
+            player2: msg.player2,
+          });
           addLog(
             `Match started: #${msg.matchId} ${msg.player1} vs ${msg.player2}`,
           );
           send(cmd.gameList());
+          send(cmd.gameWatch(msg.matchId));
           send(cmd.playerList());
           if (tournamentType === "KnockoutBracket" && !knockoutRawData) {
             send(cmd.getData("TOURNAMENT_DATA"));
@@ -271,6 +284,9 @@ export default function SpectatePage() {
           updateGame(msg.matchId, {
             result: { kind: "win", winner: msg.winner },
           });
+          if (tournamentType === "KnockoutBracket" && !knockoutRawData) {
+            setSelectedGame((prev) => (prev === msg.matchId ? null : prev));
+          }
           setTimeout(() => {
             send(cmd.gameList());
             send(cmd.playerList());
@@ -284,6 +300,9 @@ export default function SpectatePage() {
             break;
           }
           updateGame(msg.matchId, { result: { kind: "draw" } });
+          if (tournamentType === "KnockoutBracket" && !knockoutRawData) {
+            setSelectedGame((prev) => (prev === msg.matchId ? null : prev));
+          }
           break;
 
         case "GAME_TERMINATED":
@@ -292,6 +311,9 @@ export default function SpectatePage() {
             break;
           }
           updateGame(msg.matchId, { result: { kind: "terminated" } });
+          if (tournamentType === "KnockoutBracket" && !knockoutRawData) {
+            setSelectedGame((prev) => (prev === msg.matchId ? null : prev));
+          }
           send(cmd.gameList());
           break;
 
@@ -311,6 +333,7 @@ export default function SpectatePage() {
               send(cmd.getData("TOURNAMENT_DATA"));
             }
           } else if (msg.key === "TOURNAMENT_DATA" && msg.value) {
+            resetLiveGames();
             setKnockoutRawData(msg.value);
           }
           break;
@@ -325,7 +348,15 @@ export default function SpectatePage() {
     });
 
     return unsubscribe;
-  }, [addLog, knockoutRawData, send, subscribe, tournamentType, updateGame]);
+  }, [
+    addLog,
+    knockoutRawData,
+    resetLiveGames,
+    send,
+    subscribe,
+    tournamentType,
+    updateGame,
+  ]);
 
   useEffect(() => {
     if (status !== "connected" || role !== "observer") return;
@@ -357,6 +388,49 @@ export default function SpectatePage() {
     () => buildKnockoutBracket(knockoutRounds, liveGames, tournamentWinner),
     [knockoutRounds, liveGames, tournamentWinner],
   );
+  const seedingMatches = useMemo(() => {
+    const seen = new Set<number>();
+    const matches: Array<{
+      id: number;
+      player1: string;
+      player2: string;
+      currentTurnColor: 1 | 2 | null;
+      resultKind: KnockoutMatchView["resultKind"];
+      status: "scheduled" | "live" | "completed";
+    }> = [];
+
+    for (const game of gameList) {
+      seen.add(game.id);
+      const live = liveGames.get(game.id);
+      const resultKind = live?.result?.kind ?? null;
+      if (resultKind) continue;
+      matches.push({
+        id: game.id,
+        player1: game.player1,
+        player2: game.player2,
+        currentTurnColor: resultKind ? null : (live?.currentTurnColor ?? null),
+        resultKind,
+        status: resultKind ? "completed" : live ? "live" : "scheduled",
+      });
+    }
+
+    for (const game of Array.from(liveGames.values()).sort(
+      (a, b) => b.id - a.id,
+    )) {
+      if (seen.has(game.id) || !game.player1 || !game.player2 || game.result)
+        continue;
+      matches.push({
+        id: game.id,
+        player1: game.player1,
+        player2: game.player2,
+        currentTurnColor: game.result ? null : game.currentTurnColor,
+        resultKind: game.result?.kind ?? null,
+        status: game.result ? "completed" : "live",
+      });
+    }
+
+    return matches;
+  }, [gameList, liveGames]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -366,20 +440,12 @@ export default function SpectatePage() {
         </div>
       )}
 
-      {status === "connected" && (
-        <div
-          className={`rounded-xl p-4 border flex items-center gap-4 ${
-            tournamentActive
-              ? "bg-purple-950/40 border-purple-600"
-              : "bg-gray-900 border-gray-700"
-          }`}
-        >
-          <div className="text-3xl">{tournamentActive ? "🏆" : "⏳"}</div>
+      {status === "connected" && tournamentActive && (
+        <div className="rounded-xl border border-purple-600 bg-purple-950/40 p-4 flex items-center gap-4">
+          <div className="text-3xl">🏆</div>
           <div>
             <div className="font-semibold text-white">
-              {tournamentActive
-                ? `Tournament Active - ${tournamentType ?? "Unknown Type"}`
-                : "No Active Tournament"}
+              {`Tournament Active - ${tournamentType ?? "Unknown Type"}`}
             </div>
             <div className="text-sm text-gray-400">
               {gameList.length} match{gameList.length !== 1 ? "es" : ""} running
@@ -470,9 +536,31 @@ export default function SpectatePage() {
             </h2>
             {showKnockoutBracket ? (
               knockoutBracket.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-950/60 px-4 py-6 text-center text-sm text-gray-500">
-                  Knockout seeding is still in progress. The bracket will appear
-                  once tournament data is available.
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-lg border border-dashed border-gray-700 bg-gray-950/60 px-4 py-6 text-center text-sm text-gray-500">
+                    Knockout seeding is still in progress. The bracket will
+                    appear once tournament data is available.
+                  </div>
+                  {seedingMatches.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      {seedingMatches.map((match) => {
+                        return (
+                          <MatchSelectorCard
+                            key={match.id}
+                            matchId={match.id}
+                            player1={match.player1}
+                            player2={match.player2}
+                            currentTurnColor={match.currentTurnColor}
+                            status={match.status}
+                            resultKind={match.resultKind}
+                            selectedGame={selectedGame}
+                            onSelect={setSelectedGame}
+                            className="w-full sm:w-[calc(50%-0.375rem)] xl:w-[calc(33.333%-0.5rem)]"
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto pb-2">
@@ -489,74 +577,18 @@ export default function SpectatePage() {
                         </div>
                         <div className="flex flex-1 flex-col justify-center gap-3">
                           {round.matches.map((match) => {
-                            const isSelected =
-                              match.matchId !== null &&
-                              selectedGame === match.matchId;
-                            const canSelect = match.matchId !== null;
-                            const borderClass =
-                              match.status === "completed"
-                                ? "border-green-700/80"
-                                : "border-gray-700";
-
-                            const Tag = canSelect ? "button" : "div";
-
                             return (
-                              <Tag
+                              <MatchSelectorCard
                                 key={match.key}
-                                {...(canSelect
-                                  ? {
-                                      onClick: () =>
-                                        setSelectedGame(
-                                          isSelected ? null : match.matchId,
-                                        ),
-                                      type: "button" as const,
-                                    }
-                                  : {})}
-                                className={`w-full rounded-xl border bg-gray-950/70 p-3 text-left transition-colors ${borderClass} ${
-                                  canSelect
-                                    ? isSelected
-                                      ? "ring-1 ring-blue-400"
-                                      : "hover:border-blue-700/80"
-                                    : ""
-                                }`}
-                              >
-                                <div className="flex flex-col gap-2">
-                                  <BracketPlayerRow
-                                    name={match.player1}
-                                    playerColor={1}
-                                    isActive={match.currentTurnColor === 1}
-                                  />
-                                  <BracketPlayerRow
-                                    name={match.player2}
-                                    playerColor={2}
-                                    isActive={match.currentTurnColor === 2}
-                                  />
-                                  <div className="flex items-center justify-between pt-1 text-xs">
-                                    <span className="text-gray-500">
-                                      {match.matchId !== null
-                                        ? `Match #${match.matchId}`
-                                        : "Awaiting match"}
-                                    </span>
-                                    <span
-                                      className={`rounded-full px-2 py-0.5 ${
-                                        match.status === "completed"
-                                          ? "bg-green-950/70 text-green-300"
-                                          : match.status === "live"
-                                            ? "bg-blue-950/70 text-blue-300"
-                                            : "bg-gray-800 text-gray-400"
-                                      }`}
-                                    >
-                                      {match.status === "completed"
-                                        ? match.resultKind === "draw"
-                                          ? "Tie"
-                                          : "Complete"
-                                        : match.status === "live"
-                                          ? "Live"
-                                          : "Pending"}
-                                    </span>
-                                  </div>
-                                </div>
-                              </Tag>
+                                matchId={match.matchId}
+                                player1={match.player1}
+                                player2={match.player2}
+                                currentTurnColor={match.currentTurnColor}
+                                status={match.status}
+                                resultKind={match.resultKind}
+                                selectedGame={selectedGame}
+                                onSelect={setSelectedGame}
+                              />
                             );
                           })}
                         </div>
@@ -570,54 +602,38 @@ export default function SpectatePage() {
                 No active matches
               </p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 {gameList.map((g) => {
                   const live = liveGames.get(g.id);
+                  const resultKind = live?.result?.kind ?? null;
+                  const status = resultKind
+                    ? "completed"
+                    : live
+                      ? "live"
+                      : "scheduled";
                   return (
-                    <button
+                    <MatchSelectorCard
                       key={g.id}
-                      onClick={() =>
-                        setSelectedGame(selectedGame === g.id ? null : g.id)
+                      matchId={g.id}
+                      player1={g.player1}
+                      player2={g.player2}
+                      currentTurnColor={
+                        resultKind ? null : (live?.currentTurnColor ?? null)
                       }
-                      className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
-                        selectedGame === g.id
-                          ? "border-blue-500 bg-blue-950/50 text-blue-200"
-                          : "border-gray-700 bg-gray-800 hover:border-gray-500 text-gray-300"
-                      }`}
-                    >
-                      <span className="text-gray-500 text-xs font-mono mr-1">
-                        #{g.id}
-                      </span>
-                      <span className="text-red-400">{g.player1}</span>
-                      <span className="text-gray-500 mx-1">vs</span>
-                      <span className="text-yellow-400">{g.player2}</span>
-                      {live?.result && (
-                        <span className="ml-1 text-xs">
-                          {live.result.kind === "win"
-                            ? ` 🏆 ${live.result.winner}`
-                            : live.result.kind === "draw"
-                              ? " 🤝"
-                              : " ⛔"}
-                        </span>
-                      )}
-                    </button>
+                      status={status}
+                      resultKind={resultKind}
+                      selectedGame={selectedGame}
+                      onSelect={setSelectedGame}
+                      className="w-full sm:w-[calc(50%-0.375rem)] xl:w-[calc(33.333%-0.5rem)]"
+                    />
                   );
                 })}
               </div>
             )}
           </div>
 
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col items-center gap-4 min-h-64">
-            {!selectedGameData ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                <span className="text-4xl text-gray-700">🎯</span>
-                <p className="text-gray-500 text-sm">
-                  {gameList.length > 0
-                    ? "Click a match above to see the board"
-                    : "Active matches will appear here"}
-                </p>
-              </div>
-            ) : (
+          {selectedGameData && (
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col items-center gap-4 min-h-64">
               <>
                 {selectedGameData.result && (
                   <div
@@ -649,8 +665,8 @@ export default function SpectatePage() {
                   disabled
                 />
               </>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -689,6 +705,87 @@ function BracketPlayerRow({
         {name ?? "TBD"}
       </span>
     </div>
+  );
+}
+
+function MatchSelectorCard({
+  matchId,
+  player1,
+  player2,
+  currentTurnColor,
+  status,
+  resultKind,
+  selectedGame,
+  onSelect,
+  className = "w-full",
+}: {
+  matchId: number | null;
+  player1: string | null;
+  player2: string | null;
+  currentTurnColor: 1 | 2 | null;
+  status: "scheduled" | "live" | "completed";
+  resultKind: KnockoutMatchView["resultKind"];
+  selectedGame: number | null;
+  onSelect: (matchId: number | null) => void;
+  className?: string;
+}) {
+  const isSelected = matchId !== null && selectedGame === matchId;
+  const canSelect = matchId !== null;
+  const borderClass =
+    status === "completed" ? "border-green-700/80" : "border-gray-700";
+  const Tag = canSelect ? "button" : "div";
+
+  return (
+    <Tag
+      {...(canSelect
+        ? {
+            onClick: () => onSelect(isSelected ? null : matchId),
+            type: "button" as const,
+          }
+        : {})}
+      className={`${className} rounded-xl border bg-gray-950/70 p-3 text-left transition-colors ${borderClass} ${
+        canSelect
+          ? isSelected
+            ? "ring-1 ring-blue-400"
+            : "hover:border-blue-700/80"
+          : ""
+      }`}
+    >
+      <div className="flex flex-col gap-2">
+        <BracketPlayerRow
+          name={player1}
+          playerColor={1}
+          isActive={currentTurnColor === 1}
+        />
+        <BracketPlayerRow
+          name={player2}
+          playerColor={2}
+          isActive={currentTurnColor === 2}
+        />
+        <div className="flex items-center justify-between pt-1 text-xs">
+          <span className="text-gray-500">
+            {matchId !== null ? `Match #${matchId}` : "Awaiting match"}
+          </span>
+          <span
+            className={`rounded-full px-2 py-0.5 ${
+              status === "completed"
+                ? "bg-green-950/70 text-green-300"
+                : status === "live"
+                  ? "bg-blue-950/70 text-blue-300"
+                  : "bg-gray-800 text-gray-400"
+            }`}
+          >
+            {status === "completed"
+              ? resultKind === "draw"
+                ? "Tie"
+                : "Complete"
+              : status === "live"
+                ? "Live"
+                : "Pending"}
+          </span>
+        </div>
+      </div>
+    </Tag>
   );
 }
 
