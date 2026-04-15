@@ -1,0 +1,13 @@
+services:
+  connect4-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: connect4-ui
+    container_name: connect4-ui
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    restart: unless-stopped

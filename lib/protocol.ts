@@ -30,7 +30,7 @@ export interface ReservationEntry {
 export const DEFAULT_WS_URL =
   process.env.NODE_ENV === "development"
     ? "ws://localhost:8080"
-    : "wss://connect4.abunchofknowitalls.com";
+    : "wss://connect4.abunchofknowitalls.com/ws";
 export const RECONNECT_INTERVAL_MS = 5000;
 export const RECONNECT_TIMEOUT_MS = 60000;
 
