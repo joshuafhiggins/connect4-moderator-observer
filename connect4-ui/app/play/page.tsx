@@ -17,8 +17,6 @@ type GamePhase = "idle" | "connected" | "ready" | "playing" | "game-over";
 
 type GameResult = "win" | "loss" | "draw" | "terminated";
 
-const WIN_CONFETTI_DURATION_MS = 10000;
-
 export default function PlayPage() {
   const router = useRouter();
   const {
@@ -43,6 +41,7 @@ export default function PlayPage() {
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [tournamentMode, setTournamentMode] = useState(false);
   const [showWinConfetti, setShowWinConfetti] = useState(false);
+  const [winConfettiBurstId, setWinConfettiBurstId] = useState(0);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
   const myColorRef = useRef<1 | 2 | null>(null);
@@ -70,20 +69,6 @@ export default function PlayPage() {
     window.addEventListener("resize", updateViewport);
     return () => window.removeEventListener("resize", updateViewport);
   }, []);
-
-  useEffect(() => {
-    if (gameResult !== "win") {
-      return;
-    }
-
-    setShowWinConfetti(true);
-    const timeoutId = setTimeout(
-      () => setShowWinConfetti(false),
-      WIN_CONFETTI_DURATION_MS,
-    );
-
-    return () => clearTimeout(timeoutId);
-  }, [gameResult]);
 
   useEffect(() => {
     if (status === "disconnected" && shouldRedirectToConnect) {
@@ -157,6 +142,8 @@ export default function PlayPage() {
 
         case "GAME_WINS":
           setGameResult("win");
+          setWinConfettiBurstId((prev) => prev + 1);
+          setShowWinConfetti(true);
           setGamePhase("game-over");
           setIsMyTurn(false);
           isMyTurnRef.current = false;
@@ -244,9 +231,11 @@ export default function PlayPage() {
     <div className="flex flex-col gap-6">
       {showWinConfetti && (
         <Confetti
+          key={winConfettiBurstId}
           width={viewport.width}
           height={viewport.height}
           recycle={false}
+          onConfettiComplete={() => setShowWinConfetti(false)}
           numberOfPieces={300}
           gravity={0.28}
           className="pointer-events-none fixed! inset-0! z-40!"
