@@ -53,6 +53,14 @@ interface KnockoutRoundView {
   projected?: boolean;
 }
 
+interface BracketMatchEntry {
+  id: number;
+  player1: string;
+  player2: string;
+  currentTurnColor: 1 | 2 | null;
+  result: LiveGame["result"];
+}
+
 export default function SpectatePage() {
   const router = useRouter();
   const {
@@ -305,6 +313,10 @@ export default function SpectatePage() {
           if (tournamentType === "KnockoutBracket" && !knockoutRawData) {
             setSelectedGame((prev) => (prev === msg.matchId ? null : prev));
           }
+          setTimeout(() => {
+            send(cmd.gameList());
+            send(cmd.playerList());
+          }, 750);
           break;
 
         case "GAME_TERMINATED":
@@ -386,8 +398,14 @@ export default function SpectatePage() {
     [players],
   );
   const knockoutBracket = useMemo(
-    () => buildKnockoutBracket(knockoutRounds, liveGames, tournamentWinner),
-    [knockoutRounds, liveGames, tournamentWinner],
+    () =>
+      buildKnockoutBracket(
+        knockoutRounds,
+        gameList,
+        liveGames,
+        tournamentWinner,
+      ),
+    [gameList, knockoutRounds, liveGames, tournamentWinner],
   );
   const seedingMatches = useMemo(() => {
     const seen = new Set<number>();
@@ -813,14 +831,37 @@ function parseKnockoutRounds(raw: string) {
 
 function buildKnockoutBracket(
   rounds: string[][],
+  gameList: GameEntry[],
   liveGames: Map<number, LiveGame>,
   tournamentWinner: string | null,
 ) {
   if (rounds.length === 0) return [] as KnockoutRoundView[];
 
-  const liveGameEntries = Array.from(liveGames.values()).sort(
-    (a, b) => b.id - a.id,
-  );
+  const activeMatchIds = new Set(gameList.map((game) => game.id));
+  const bracketMatchEntries: BracketMatchEntry[] = [
+    ...[...gameList]
+      .sort((a, b) => b.id - a.id)
+      .map((game) => {
+        const live = liveGames.get(game.id);
+        return {
+          id: game.id,
+          player1: game.player1,
+          player2: game.player2,
+          currentTurnColor: live?.currentTurnColor ?? null,
+          result: null,
+        } satisfies BracketMatchEntry;
+      }),
+    ...Array.from(liveGames.values())
+      .sort((a, b) => b.id - a.id)
+      .filter((game) => !activeMatchIds.has(game.id))
+      .map((game) => ({
+        id: game.id,
+        player1: game.player1,
+        player2: game.player2,
+        currentTurnColor: game.currentTurnColor,
+        result: game.result,
+      })),
+  ];
   const displayRounds: Array<{
     label: string;
     players: Array<string | null>;
@@ -837,7 +878,7 @@ function buildKnockoutBracket(
         if (index % 2 !== 0) return acc;
         const player1 = source[index] ?? null;
         const player2 = source[index + 1] ?? null;
-        const liveMatch = findLiveMatch(liveGameEntries, player1, player2);
+        const liveMatch = findBracketMatch(bracketMatchEntries, player1, player2);
         acc.push(
           resolveLiveWinner(liveMatch, tournamentWinner, player1, player2),
         );
@@ -860,7 +901,7 @@ function buildKnockoutBracket(
       ([player1, player2], matchIndex) => {
         const nextRound = displayRounds[roundIndex + 1];
         const nextRoundPlayer = nextRound?.players[matchIndex] ?? null;
-        const liveMatch = findLiveMatch(liveGameEntries, player1, player2);
+        const liveMatch = findBracketMatch(bracketMatchEntries, player1, player2);
         const displayPlayer1 = liveMatch?.player1 ?? player1;
         const displayPlayer2 = liveMatch?.player2 ?? player2;
         const hasAdvancedPastRound =
@@ -906,22 +947,21 @@ function pairPlayers(players: Array<string | null>) {
   return pairs;
 }
 
-function findLiveMatch(
-  liveGames: LiveGame[],
+function findBracketMatch(
+  matches: BracketMatchEntry[],
   player1: string | null,
   player2: string | null,
 ) {
   if (!player1 || !player2) return null;
 
   return (
-    liveGames.find((game) =>
-      samePlayers(game.player1, game.player2, player1, player2),
-    ) ?? null
+    matches.find((game) => samePlayers(game.player1, game.player2, player1, player2)) ??
+    null
   );
 }
 
 function resolveLiveWinner(
-  liveMatch: LiveGame | null,
+  liveMatch: BracketMatchEntry | null,
   tournamentWinner: string | null,
   player1: string | null,
   player2: string | null,
