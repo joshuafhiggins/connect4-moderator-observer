@@ -167,7 +167,9 @@ export default function SpectatePage() {
 
         case "TOURNAMENT_END":
           setTournamentActive(false);
-          setTournamentType(null);
+          if (tournamentType !== "RoundRobin") {
+            setTournamentType(null);
+          }
           addLog("Round ended");
           send(cmd.gameList());
           send(cmd.playerList());
@@ -511,7 +513,7 @@ export default function SpectatePage() {
                       key={s.player}
                       className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800"
                     >
-                      <span className="text-sm font-bold w-6 text-gray-300">
+                      <span className="text-sm font-bold w-6 text-gray-500">
                         {i + 1}.
                       </span>
                       <span className="text-white flex-1 font-medium text-sm">
