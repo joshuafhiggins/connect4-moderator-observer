@@ -60,7 +60,6 @@ export default function SpectatePage() {
     status,
     send,
     subscribe,
-    disconnect,
     shouldRedirectToConnect,
     clearRedirectFlag,
   } = useConnection();
@@ -72,7 +71,6 @@ export default function SpectatePage() {
   const [gameList, setGameList] = useState<GameEntry[]>([]);
   const [liveGames, setLiveGames] = useState<Map<number, LiveGame>>(new Map());
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
-  const [log, setLog] = useState<string[]>([]);
   const [knockoutRawData, setKnockoutRawData] = useState("");
   const [tournamentWinner, setTournamentWinner] = useState<string | null>(null);
 
@@ -80,11 +78,11 @@ export default function SpectatePage() {
   const initialBoardSyncPendingRef = useRef(true);
 
   const addLog = useCallback(
-    (msg: string) =>
-      setLog((prev) => [
-        `[${new Date().toLocaleTimeString()}] ${msg}`,
-        ...prev.slice(0, 79),
-      ]),
+    (msg: string) => {
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[spectate] ${msg}`);
+      }
+    },
     [],
   );
 

@@ -1,27 +1,37 @@
 "use client";
 import Link from "next/link";
-import { SubmitEvent, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
+import { Settings, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
+import AdminSettingsPanel from "@/components/AdminSettingsPanel";
 import { useConnection } from "@/lib/connection";
-import { cmd } from "@/lib/protocol";
 
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { status, role, username, send, becomePlayer, disconnect } =
-    useConnection();
+  const {
+    status,
+    role,
+    username,
+    becomePlayer,
+    disconnect,
+    isAdmin,
+    shouldRedirectToConnect,
+  } = useConnection();
   const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [nextUsername, setNextUsername] = useState(username);
   const isConnectionPage = pathname === "/";
 
   const disableRoleSwitch =
     status === "connecting" || status === "reconnecting";
 
-  const handleBecomeObserver = () => {
-    send(cmd.disconnect());
-    router.push("/spectate");
-  };
+  useEffect(() => {
+    if (isConnectionPage || (status === "disconnected" && shouldRedirectToConnect)) {
+      setShowSettingsModal(false);
+    }
+  }, [isConnectionPage, status, shouldRedirectToConnect]);
 
   const handleBecomePlayer = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -48,7 +58,7 @@ export default function Nav() {
           <div className="ml-auto flex items-center gap-2">
             {!isConnectionPage && (
               <>
-                {role !== "player" && (
+                {role !== "player" && !isAdmin && (
                   <button
                     onClick={() => {
                       setNextUsername(username);
@@ -66,6 +76,17 @@ export default function Nav() {
                 >
                   Disconnect
                 </button>
+                {role !== "player" && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsModal(true)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-gray-200 transition-colors hover:bg-gray-700 hover:text-white"
+                    aria-label="Open settings"
+                    title="Settings"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -107,6 +128,45 @@ export default function Nav() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 px-4 py-6">
+          <div className="mx-auto flex h-full max-w-4xl items-center justify-center">
+            <div className="flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-950 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-gray-800 px-5 py-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Settings</h2>
+                  <p className="text-sm text-gray-400">
+                    Admin tools for tournaments, server values, and reservations.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      isAdmin
+                        ? "border border-green-700 bg-green-950/80 text-green-300"
+                        : "border border-gray-700 bg-gray-800 text-gray-400"
+                    }`}
+                  >
+                    {isAdmin ? "Admin" : "Observer"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsModal(false)}
+                    className="inline-flex items-center justify-center rounded-lg bg-gray-800 p-2 text-white transition-colors hover:bg-gray-700"
+                    aria-label="Close settings"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-y-auto p-5">
+                <AdminSettingsPanel />
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>

@@ -22,6 +22,11 @@ export interface MoveEntry {
   column: number;
 }
 
+export interface ReservationEntry {
+  player1: string;
+  player2: string;
+}
+
 export const DEFAULT_WS_URL =
   process.env.NODE_ENV === "development"
     ? "ws://localhost:8080"
@@ -69,6 +74,9 @@ export type ParsedMessage =
   | { type: "TOURNAMENT_WINNER"; username: string }
   | { type: "TOURNAMENT_END" }
   | { type: "ADMIN_AUTH_ACK" }
+  | { type: "RESERVATION_ADD"; player1: string; player2: string }
+  | { type: "RESERVATION_DELETE"; player1: string; player2: string }
+  | { type: "RESERVATION_LIST"; reservations: ReservationEntry[] }
   | { type: "GET_DATA"; key: string; value: string }
   | { type: "SET_DATA_ACK"; key: string }
   | { type: "ERROR"; message: string }
@@ -257,6 +265,36 @@ export function parseMessage(raw: string): ParsedMessage {
       if (parts[2] === "ACK") return { type: "SET_DATA_ACK", key: parts[1] };
       break;
 
+    case "RESERVATION": {
+      const payload = parts[2] ?? "";
+
+      if (parts[1] === "ADD" || parts[1] === "DELETE") {
+        const [player1, player2] = payload.split(",");
+        if (player1 && player2) {
+          return {
+            type: parts[1] === "ADD" ? "RESERVATION_ADD" : "RESERVATION_DELETE",
+            player1,
+            player2,
+          };
+        }
+      }
+
+      if (parts[1] === "LIST") {
+        const reservations =
+          payload.length === 0
+            ? []
+            : payload
+                .split("|")
+                .map((entry) => {
+                  const [player1, player2] = entry.split(",");
+                  return player1 && player2 ? { player1, player2 } : null;
+                })
+                .filter((entry): entry is ReservationEntry => entry !== null);
+        return { type: "RESERVATION_LIST", reservations };
+      }
+      break;
+    }
+
     case "ERROR":
       return { type: "ERROR", message: raw };
   }
@@ -283,14 +321,7 @@ export const cmd = {
   adminKick: (username: string) => `ADMIN:KICK:${username}`,
   tournamentStart: (type = "RoundRobin") => `TOURNAMENT:START:${type}`,
   tournamentCancel: () => "TOURNAMENT:CANCEL",
-  getData: (
-    key:
-      | "TOURNAMENT_STATUS"
-      | "TOURNAMENT_DATA"
-      | "MOVE_WAIT"
-      | "DEMO_MODE"
-      | "MAX_TIMEOUT",
-  ) => `GET:${key}`,
+  getData: (key: string) => `GET:${key}`,
   setData: (key: string, value: string) => `SET:${key}:${value}`,
   reservationAdd: (p1: string, p2: string) => `RESERVATION:ADD:${p1},${p2}`,
   reservationDelete: (p1: string, p2: string) =>

@@ -40,9 +40,11 @@ interface ConnectionContextValue {
   username: string;
   status: ConnectionStatus;
   isInMatch: boolean;
+  isAdmin: boolean;
   reconnectAttempts: number;
   shouldRedirectToConnect: boolean;
   becomePlayer: (username: string) => void;
+  authenticateAdmin: (password: string) => boolean;
   connect: (options: ConnectOptions) => void;
   disconnect: () => void;
   send: (message: string) => boolean;
@@ -68,6 +70,7 @@ export function ConnectionProvider({
   const [username, setUsername] = useState("");
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [isInMatch, setIsInMatch] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [shouldRedirectToConnect, setShouldRedirectToConnect] = useState(false);
 
@@ -169,23 +172,31 @@ export function ConnectionProvider({
           setRole("observer");
           setShouldRedirectToConnect(false);
           setStatus("connected");
+          setIsAdmin(false);
         }
 
         if (parsed.type === "CONNECT_ACK") {
           setRole("player");
+          setIsAdmin(false);
         }
 
         if (parsed.type === "RECONNECT_ACK") {
           clearReconnectState();
           setShouldRedirectToConnect(false);
           setStatus("connected");
+          setIsAdmin(false);
         }
 
         if (parsed.type === "DISCONNECT_ACK") {
           setRole("observer");
           setUsername("");
+          setIsAdmin(false);
           isInMatchRef.current = false;
           setIsInMatch(false);
+        }
+
+        if (parsed.type === "ADMIN_AUTH_ACK") {
+          setIsAdmin(true);
         }
 
         if (parsed.type === "GAME_START") {
@@ -286,12 +297,22 @@ export function ConnectionProvider({
       clearReconnectState();
       isInMatchRef.current = false;
       setIsInMatch(false);
+      setIsAdmin(false);
       setStatus("connecting");
 
       openSocket(false);
     },
     [clearReconnectState, openSocket],
   );
+
+  const send = useCallback((message: string) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+    if (process.env.NODE_ENV === "development") {
+      console.log("Sending: " + message);
+    }
+    wsRef.current.send(message);
+    return true;
+  }, []);
 
   const becomePlayer = useCallback(
     (username: string) => {
@@ -300,9 +321,19 @@ export function ConnectionProvider({
       setUsername(resolvedUsername);
       isInMatchRef.current = false;
       setIsInMatch(false);
+      setIsAdmin(false);
       send(cmd.connect(resolvedUsername));
     },
-    [clearReconnectState, openSocket],
+    [send],
+  );
+
+  const authenticateAdmin = useCallback(
+    (password: string) => {
+      const trimmed = password.trim();
+      if (!trimmed) return false;
+      return send(cmd.adminAuth(trimmed));
+    },
+    [send],
   );
 
   const disconnect = useCallback(() => {
@@ -315,18 +346,10 @@ export function ConnectionProvider({
     setStatus("idle");
     setUsername("");
     setIsInMatch(false);
+    setIsAdmin(false);
     isInMatchRef.current = false;
     setShouldRedirectToConnect(false);
   }, [clearReconnectState, safeCloseSocket]);
-
-  const send = useCallback((message: string) => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
-    if (process.env.NODE_ENV === "development") {
-      console.log("Sending: " + message);
-    }
-    wsRef.current.send(message);
-    return true;
-  }, []);
 
   const subscribe = useCallback((listener: MessageListener) => {
     listenersRef.current.add(listener);
@@ -354,9 +377,11 @@ export function ConnectionProvider({
       username,
       status,
       isInMatch,
+      isAdmin,
       reconnectAttempts,
       shouldRedirectToConnect,
       becomePlayer,
+      authenticateAdmin,
       connect,
       disconnect,
       send,
@@ -369,8 +394,11 @@ export function ConnectionProvider({
       username,
       status,
       isInMatch,
+      isAdmin,
       reconnectAttempts,
       shouldRedirectToConnect,
+      becomePlayer,
+      authenticateAdmin,
       connect,
       disconnect,
       send,

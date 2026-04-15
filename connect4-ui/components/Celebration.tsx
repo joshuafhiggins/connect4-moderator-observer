@@ -23,8 +23,6 @@ export default function Celebration() {
   }, []);
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
     const unsubscribe = subscribe((msg) => {
       if (msg.type !== "TOURNAMENT_WINNER") return;
 
