@@ -144,6 +144,7 @@ export default function SpectatePage() {
           setScores([]);
           setKnockoutRawData("");
           setTournamentWinner(null);
+          resetLiveGames();
           addLog(`🏆 Tournament started: ${msg.tournamentType}`);
           send(cmd.gameList());
           send(cmd.playerList());
@@ -157,6 +158,7 @@ export default function SpectatePage() {
           setTournamentType(null);
           setKnockoutRawData("");
           setTournamentWinner(null);
+          resetLiveGames();
           addLog("❌ Tournament cancelled");
           break;
 
@@ -859,6 +861,8 @@ function buildKnockoutBracket(
         const nextRound = displayRounds[roundIndex + 1];
         const nextRoundPlayer = nextRound?.players[matchIndex] ?? null;
         const liveMatch = findLiveMatch(liveGameEntries, player1, player2);
+        const displayPlayer1 = liveMatch?.player1 ?? player1;
+        const displayPlayer2 = liveMatch?.player2 ?? player2;
         const hasAdvancedPastRound =
           roundIndex < rounds.length - 1 &&
           !displayRounds[roundIndex + 1]?.projected;
@@ -879,8 +883,8 @@ function buildKnockoutBracket(
           key: `${roundIndex}-${matchIndex}-${player1 ?? "tbd"}-${player2 ?? "tbd"}`,
           roundIndex,
           matchIndex,
-          player1,
-          player2,
+          player1: displayPlayer1,
+          player2: displayPlayer2,
           winner,
           currentTurnColor: winner
             ? null

@@ -57,7 +57,7 @@ export default function Celebration() {
               {winner}
             </h2>
             <p className="mt-4 text-base text-amber-100/85">
-              Dominated the bracket and closed out the tournament.
+              Dominated and closed out the tournament.
             </p>
             <button
               type="button"
