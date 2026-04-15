@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: connect4-ui
+    image: joshuafhiggins/connect4-ui
     container_name: connect4-ui
     environment:
       NODE_ENV: production
