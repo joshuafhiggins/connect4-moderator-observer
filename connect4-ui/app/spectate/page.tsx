@@ -331,7 +331,6 @@ export default function SpectatePage() {
               send(cmd.getData("TOURNAMENT_DATA"));
             }
           } else if (msg.key === "TOURNAMENT_DATA" && msg.value) {
-            resetLiveGames();
             setKnockoutRawData(msg.value);
           }
           break;
@@ -677,7 +676,7 @@ function BracketPlayerRow({
   isActive,
 }: {
   name: string | null;
-  playerColor: 1 | 2;
+  playerColor: 1 | 2 | null;
   isActive: boolean;
 }) {
   const isRed = playerColor === 1;
@@ -692,7 +691,7 @@ function BracketPlayerRow({
           : "border-gray-700 bg-gray-900 text-gray-400"
       }`}
     >
-      {name && (
+      {name && playerColor !== null && (
         <div
           className={`h-3.5 w-3.5 shrink-0 rounded-full ${
             isRed ? "bg-red-500" : "bg-yellow-400"
@@ -732,6 +731,8 @@ function MatchSelectorCard({
   const borderClass =
     status === "completed" ? "border-green-700/80" : "border-gray-700";
   const Tag = canSelect ? "button" : "div";
+  
+  const showColors = player1 !== null && player2 !== null;
 
   return (
     <Tag
@@ -752,12 +753,12 @@ function MatchSelectorCard({
       <div className="flex flex-col gap-2">
         <BracketPlayerRow
           name={player1}
-          playerColor={1}
+          playerColor={showColors ? 1 : null}
           isActive={currentTurnColor === 1}
         />
         <BracketPlayerRow
           name={player2}
-          playerColor={2}
+          playerColor={showColors ? 2 : null}
           isActive={currentTurnColor === 2}
         />
         <div className="flex items-center justify-between pt-1 text-xs">
@@ -856,20 +857,17 @@ function buildKnockoutBracket(
         const nextRound = displayRounds[roundIndex + 1];
         const nextRoundPlayer = nextRound?.players[matchIndex] ?? null;
         const liveMatch = findLiveMatch(liveGameEntries, player1, player2);
-        const isProjectedRound = Boolean(round.projected);
-        const hasKnownPlayers = Boolean(player1 && player2);
         const hasAdvancedPastRound =
           roundIndex < rounds.length - 1 &&
           !displayRounds[roundIndex + 1]?.projected;
-        const inferredCompletedRealMatch =
-          !isProjectedRound && hasKnownPlayers && !liveMatch;
+        const hasExplicitResult = Boolean(liveMatch?.result);
         const winner =
           nextRoundPlayer &&
           (nextRoundPlayer === player1 || nextRoundPlayer === player2)
             ? nextRoundPlayer
             : resolveLiveWinner(liveMatch, tournamentWinner, player1, player2);
         const status =
-          winner || hasAdvancedPastRound || inferredCompletedRealMatch
+          hasExplicitResult || winner || hasAdvancedPastRound
             ? "completed"
             : liveMatch
               ? "live"
