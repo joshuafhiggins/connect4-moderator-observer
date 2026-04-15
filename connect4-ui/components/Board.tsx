@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BoardState } from "@/lib/protocol";
 
 interface BoardProps {
@@ -23,7 +24,43 @@ export default function Board({
   currentTurnColor,
 }: BoardProps) {
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const [animatingMove, setAnimatingMove] = useState<{
+    column: number;
+    row: number;
+  } | null>(null);
+  const isFirstRender = useRef(true);
+  const animationTimeoutRef = useRef<number | null>(null);
   const canInteract = !disabled && !!onColumnClick;
+  const lastMoveColumn = lastMove?.column ?? null;
+  const lastMoveRow = lastMove?.row ?? null;
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (animationTimeoutRef.current !== null) {
+      window.clearTimeout(animationTimeoutRef.current);
+    }
+
+    if (lastMoveColumn === null || lastMoveRow === null) {
+      setAnimatingMove(null);
+      return;
+    }
+
+    setAnimatingMove({ column: lastMoveColumn, row: lastMoveRow });
+    animationTimeoutRef.current = window.setTimeout(() => {
+      setAnimatingMove(null);
+      animationTimeoutRef.current = null;
+    }, 450);
+
+    return () => {
+      if (animationTimeoutRef.current !== null) {
+        window.clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, [lastMoveColumn, lastMoveRow]);
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -96,27 +133,44 @@ export default function Board({
                 const cell = board[col][row];
                 const isLast =
                   lastMove?.column === col && lastMove?.row === row;
+                const isAnimatingDrop =
+                  animatingMove?.column === col && animatingMove?.row === row;
+                const chipScale = isLast ? 1.1 : 1;
+                const dropDistance = `${(5 - row) * 56 + 16}px`;
                 return (
                   <div
                     key={row}
-                    className={`w-12 h-12 rounded-full border-2 transition-all duration-150 ${
-                      cell === 1
-                        ? `bg-red-500 shadow-lg shadow-red-950/60 ${
-                            isLast ? "border-white scale-110" : "border-red-700"
+                    className={`relative w-12 h-12 rounded-full border-2 bg-slate-950 overflow-visible ${
+                      cell === 0
+                        ? `border-slate-800 ${
+                            hoveredCol === col && canInteract
+                              ? "border-blue-400/50"
+                              : ""
                           }`
-                        : cell === 2
-                          ? `bg-yellow-400 shadow-lg shadow-yellow-950/60 ${
-                              isLast
-                                ? "border-white scale-110"
-                                : "border-yellow-600"
-                            }`
-                          : `bg-slate-950 border-slate-800 ${
-                              hoveredCol === col && canInteract
-                                ? "border-blue-400/50"
-                                : ""
-                            }`
+                        : isLast
+                          ? "border-white"
+                          : "border-slate-900"
                     }`}
-                  />
+                  >
+                    {cell !== 0 && (
+                      <div
+                        className={`absolute inset-0 rounded-full border-2 shadow-lg transition-transform duration-150 ${
+                          cell === 1
+                            ? `bg-red-500 border-red-700 shadow-red-950/60`
+                            : `bg-yellow-400 border-yellow-600 shadow-yellow-950/60`
+                        } ${isAnimatingDrop ? "chip-drop" : ""}`}
+                        style={
+                          {
+                            "--chip-drop-distance": `-${dropDistance}`,
+                            "--chip-scale": chipScale,
+                            transform: isAnimatingDrop
+                              ? undefined
+                              : `scale(${chipScale})`,
+                          } as CSSProperties
+                        }
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -135,6 +189,29 @@ export default function Board({
           ))}
         </div>
       </div>
+
+      <style jsx>{`
+        .chip-drop {
+          animation: chip-drop 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          will-change: transform;
+        }
+
+        @keyframes chip-drop {
+          from {
+            transform: translateY(var(--chip-drop-distance))
+              scale(var(--chip-scale));
+          }
+          to {
+            transform: translateY(0) scale(var(--chip-scale));
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .chip-drop {
+            animation: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }
