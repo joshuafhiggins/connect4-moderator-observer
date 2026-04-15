@@ -443,7 +443,7 @@ export default function SpectatePage() {
         player1: game.player1,
         player2: game.player2,
         currentTurnColor: game.result ? null : game.currentTurnColor,
-        resultKind: game.result?.kind ?? null,
+        resultKind: null,
         status: game.result ? "completed" : "live",
       });
     }
