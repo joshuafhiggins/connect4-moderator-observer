@@ -3,6 +3,8 @@
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { BoardState } from "@/lib/protocol";
+import { CHIP_DROP_SOUND_PATHS } from "@/lib/sfx";
+const CHIP_DROP_ANIMATION_MS = 450;
 
 interface BoardProps {
   board: BoardState;
@@ -30,9 +32,26 @@ export default function Board({
   } | null>(null);
   const isFirstRender = useRef(true);
   const animationTimeoutRef = useRef<number | null>(null);
+  const chipDropSoundsRef = useRef<HTMLAudioElement[]>([]);
   const canInteract = !disabled && !!onColumnClick;
   const lastMoveColumn = lastMove?.column ?? null;
   const lastMoveRow = lastMove?.row ?? null;
+
+  useEffect(() => {
+    chipDropSoundsRef.current = CHIP_DROP_SOUND_PATHS.map((path) => {
+      const sound = new Audio(path);
+      sound.preload = "auto";
+      return sound;
+    });
+
+    return () => {
+      chipDropSoundsRef.current.forEach((sound) => {
+        sound.pause();
+        sound.src = "";
+      });
+      chipDropSoundsRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -49,11 +68,26 @@ export default function Board({
       return;
     }
 
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const dropDurationMs = prefersReducedMotion ? 0 : CHIP_DROP_ANIMATION_MS;
+
     setAnimatingMove({ column: lastMoveColumn, row: lastMoveRow });
     animationTimeoutRef.current = window.setTimeout(() => {
+      const sounds = chipDropSoundsRef.current;
+      const sound = sounds[Math.floor(Math.random() * sounds.length)];
+
+      if (sound) {
+        sound.currentTime = 0;
+        void sound.play().catch(() => {
+          // Ignore autoplay failures until the user has interacted.
+        });
+      }
+
       setAnimatingMove(null);
       animationTimeoutRef.current = null;
-    }, 450);
+    }, dropDurationMs);
 
     return () => {
       if (animationTimeoutRef.current !== null) {
@@ -192,7 +226,8 @@ export default function Board({
 
       <style jsx>{`
         .chip-drop {
-          animation: chip-drop 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          animation: chip-drop ${CHIP_DROP_ANIMATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)
+            forwards;
           will-change: transform;
         }
 

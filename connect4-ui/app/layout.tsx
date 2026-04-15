@@ -3,6 +3,7 @@ import "./globals.css";
 import Celebration from "@/components/Celebration";
 import Nav from "@/components/Nav";
 import { ConnectionProvider } from "@/lib/connection";
+import { CHIP_DROP_SOUND_PATHS } from "@/lib/sfx";
 
 export const metadata: Metadata = {
   title: "Connect4 Moderator",
@@ -16,6 +17,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {CHIP_DROP_SOUND_PATHS.map((path) => (
+          <link
+            key={path}
+            rel="preload"
+            href={path}
+            as="audio"
+            type="audio/ogg"
+          />
+        ))}
+      </head>
       <body className="min-h-screen bg-gray-950 text-gray-100">
         <ConnectionProvider>
           <Celebration />
