@@ -7,7 +7,6 @@ import { ConnectionProvider } from "@/lib/connection";
 import { CHIP_DROP_SOUND_PATHS } from "@/lib/sfx";
 
 export const metadata: Metadata = {
-  title: "Connect4 RPI Minds & Machines",
   description: "Watch matches, track tournaments, and play Connect4",
   icons: {
     icon: "/favicon.ico",
