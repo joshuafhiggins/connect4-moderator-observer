@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { SubmitEvent, useEffect, useState } from "react";
 import { Settings, X } from "lucide-react";
@@ -51,7 +52,13 @@ export default function Nav() {
             href="/"
             className="text-lg font-bold text-white flex items-center gap-2"
           >
-            <span className="text-2xl">🔴</span>
+            <Image
+              src="/icon.png"
+              alt="Connect4 Observer icon"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-sm"
+            />
             <span>Connect4 Observer</span>
           </Link>
 
