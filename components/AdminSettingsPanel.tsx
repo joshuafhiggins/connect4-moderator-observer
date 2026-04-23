@@ -152,6 +152,7 @@ export default function AdminSettingsPanel() {
           break;
         case "RESERVATION_LIST":
           setReservations(message.reservations);
+          setActionFeedback("Loaded reservations.");
           break;
         case "RESERVATION_ADD":
           setReservations((prev) => {

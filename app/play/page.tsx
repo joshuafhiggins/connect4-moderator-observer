@@ -23,6 +23,8 @@ export default function PlayPage() {
     role,
     username,
     status,
+    isInMatch,
+    shouldGoFirst,
     send,
     subscribe,
     reconnectAttempts,
@@ -86,13 +88,25 @@ export default function PlayPage() {
     }
 
     if (status === "connected" && gamePhase === "idle") {
-      setGamePhase("connected");
+      // Mid-match reconnect can remount with phase idle while still in a match; avoid
+      // the pre-queue "connected" / Ready Up state until we know we are not in-game.
+      setGamePhase(isInMatch ? "playing" : "connected");
+      if (isInMatch) {
+        const color: 1 | 2 = shouldGoFirst ? 1 : 2;
+        setMyColor(color);
+        myColorRef.current = color;
+        
+        setIsMyTurn(shouldGoFirst);
+        isMyTurnRef.current = shouldGoFirst;
+      }
+      
     }
   }, [
     role,
     status,
     router,
     gamePhase,
+    isInMatch,
     shouldRedirectToConnect,
     clearRedirectFlag,
   ]);
@@ -102,7 +116,11 @@ export default function PlayPage() {
       switch (msg.type) {
         case "CONNECT_ACK":
         case "RECONNECT_ACK":
-          setGamePhase((prev) => (prev === "idle" ? "connected" : prev));
+          setGamePhase((prev) => {
+            if (prev !== "idle") return prev;
+            if (isInMatch) return "playing";
+            return "connected";
+          });
           break;
 
         case "ERROR":
@@ -193,7 +211,7 @@ export default function PlayPage() {
     });
 
     return unsubscribe;
-  }, [resetGame, send, subscribe]);
+  }, [resetGame, send, subscribe, isInMatch, username]);
 
   const handleColumnClick = useCallback(
     (col: number) => {

@@ -40,6 +40,7 @@ interface ConnectionContextValue {
   username: string;
   status: ConnectionStatus;
   isInMatch: boolean;
+  shouldGoFirst: boolean;
   isAdmin: boolean;
   reconnectAttempts: number;
   shouldRedirectToConnect: boolean;
@@ -70,6 +71,7 @@ export function ConnectionProvider({
   const [username, setUsername] = useState("");
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [isInMatch, setIsInMatch] = useState(false);
+  const [shouldGoFirst, setShouldGoFirst] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [shouldRedirectToConnect, setShouldRedirectToConnect] = useState(false);
@@ -81,6 +83,7 @@ export function ConnectionProvider({
   const reconnectDeadlineRef = useRef<number | null>(null);
   const reconnectActiveRef = useRef(false);
   const isInMatchRef = useRef(false);
+  const shouldGoFirstRef = useRef(false);
   const sessionRef = useRef<SessionState | null>(null);
 
   const clearReconnectTimer = useCallback(() => {
@@ -202,6 +205,8 @@ export function ConnectionProvider({
         if (parsed.type === "GAME_START") {
           isInMatchRef.current = true;
           setIsInMatch(true);
+          shouldGoFirstRef.current = parsed.goesFirst;
+          setShouldGoFirst(parsed.goesFirst);
         }
 
         if (
@@ -377,6 +382,7 @@ export function ConnectionProvider({
       username,
       status,
       isInMatch,
+      shouldGoFirst,
       isAdmin,
       reconnectAttempts,
       shouldRedirectToConnect,
@@ -394,6 +400,7 @@ export function ConnectionProvider({
       username,
       status,
       isInMatch,
+      shouldGoFirst,
       isAdmin,
       reconnectAttempts,
       shouldRedirectToConnect,
