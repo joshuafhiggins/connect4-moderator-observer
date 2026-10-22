@@ -30,12 +30,27 @@ export default function Board({
     column: number;
     row: number;
   } | null>(null);
-  const isFirstRender = useRef(true);
   const animationTimeoutRef = useRef<number | null>(null);
   const chipDropSoundsRef = useRef<HTMLAudioElement[]>([]);
   const canInteract = !disabled && !!onColumnClick;
   const lastMoveColumn = lastMove?.column ?? null;
   const lastMoveRow = lastMove?.row ?? null;
+  const [previousMove, setPreviousMove] = useState({
+    column: lastMoveColumn,
+    row: lastMoveRow,
+  });
+
+  if (
+    previousMove.column !== lastMoveColumn ||
+    previousMove.row !== lastMoveRow
+  ) {
+    setPreviousMove({ column: lastMoveColumn, row: lastMoveRow });
+    setAnimatingMove(
+      lastMoveColumn === null || lastMoveRow === null
+        ? null
+        : { column: lastMoveColumn, row: lastMoveRow },
+    );
+  }
 
   useEffect(() => {
     chipDropSoundsRef.current = CHIP_DROP_SOUND_PATHS.map((path) => {
@@ -54,26 +69,13 @@ export default function Board({
   }, []);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    if (animationTimeoutRef.current !== null) {
-      window.clearTimeout(animationTimeoutRef.current);
-    }
-
-    if (lastMoveColumn === null || lastMoveRow === null) {
-      setAnimatingMove(null);
-      return;
-    }
+    if (animatingMove === null) return;
 
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
     const dropDurationMs = prefersReducedMotion ? 0 : CHIP_DROP_ANIMATION_MS;
 
-    setAnimatingMove({ column: lastMoveColumn, row: lastMoveRow });
     animationTimeoutRef.current = window.setTimeout(() => {
       const sounds = chipDropSoundsRef.current;
       const sound = sounds[Math.floor(Math.random() * sounds.length)];
@@ -94,7 +96,7 @@ export default function Board({
         window.clearTimeout(animationTimeoutRef.current);
       }
     };
-  }, [lastMoveColumn, lastMoveRow]);
+  }, [animatingMove]);
 
   return (
     <div className="flex flex-col items-center gap-3">

@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { SubmitEvent, useEffect, useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { Settings, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
@@ -28,11 +28,12 @@ export default function Nav() {
   const disableRoleSwitch =
     status === "connecting" || status === "reconnecting";
 
-  useEffect(() => {
-    if (isConnectionPage || (status === "disconnected" && shouldRedirectToConnect)) {
-      setShowSettingsModal(false);
-    }
-  }, [isConnectionPage, status, shouldRedirectToConnect]);
+  if (
+    showSettingsModal &&
+    (isConnectionPage || (status === "disconnected" && shouldRedirectToConnect))
+  ) {
+    setShowSettingsModal(false);
+  }
 
   const handleBecomePlayer = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();

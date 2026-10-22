@@ -49,6 +49,20 @@ export default function PlayPage() {
   const myColorRef = useRef<1 | 2 | null>(null);
   const isMyTurnRef = useRef(false);
 
+  // Restore match state before showing Ready Up after a mid-match reconnect.
+  if (role === "player" && status === "connected" && gamePhase === "idle") {
+    setGamePhase(isInMatch ? "playing" : "connected");
+    if (isInMatch) {
+      setMyColor(shouldGoFirst ? 1 : 2);
+      setIsMyTurn(shouldGoFirst);
+    }
+  }
+
+  useEffect(() => {
+    myColorRef.current = myColor;
+    isMyTurnRef.current = isMyTurn;
+  }, [myColor, isMyTurn]);
+
   const resetGame = useCallback(() => {
     setBoard(createEmptyBoard());
     setLastMove(null);
@@ -86,30 +100,7 @@ export default function PlayPage() {
       router.replace("/spectate");
       return;
     }
-
-    if (status === "connected" && gamePhase === "idle") {
-      // Mid-match reconnect can remount with phase idle while still in a match; avoid
-      // the pre-queue "connected" / Ready Up state until we know we are not in-game.
-      setGamePhase(isInMatch ? "playing" : "connected");
-      if (isInMatch) {
-        const color: 1 | 2 = shouldGoFirst ? 1 : 2;
-        setMyColor(color);
-        myColorRef.current = color;
-        
-        setIsMyTurn(shouldGoFirst);
-        isMyTurnRef.current = shouldGoFirst;
-      }
-      
-    }
-  }, [
-    role,
-    status,
-    router,
-    gamePhase,
-    isInMatch,
-    shouldRedirectToConnect,
-    clearRedirectFlag,
-  ]);
+  }, [role, status, router, shouldRedirectToConnect, clearRedirectFlag]);
 
   useEffect(() => {
     const unsubscribe = subscribe((msg: ParsedMessage) => {
